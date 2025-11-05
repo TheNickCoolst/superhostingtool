@@ -1,10 +1,10 @@
 import { Response, NextFunction } from 'express';
-import { PrismaClient, BackupType } from '@prisma/client';
+import { BackupType } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AppError } from '../middleware/error.middleware';
+import { prisma } from '../lib/prisma';
 import { AgentService } from '../services/agent.service';
 
-const prisma = new PrismaClient();
 
 export class BackupController {
   private agentService = new AgentService();

@@ -2,8 +2,8 @@ import { Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AppError } from '../middleware/error.middleware';
+import { prisma } from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 export class ModController {
   getAllMods = async (req: AuthRequest, res: Response, next: NextFunction) => {

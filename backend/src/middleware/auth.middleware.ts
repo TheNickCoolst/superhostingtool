@@ -23,7 +23,11 @@ export const authenticate = (
     }
 
     const token = authHeader.substring(7);
-    const secret = process.env.JWT_SECRET || 'default-secret';
+    const secret = process.env.JWT_SECRET;
+
+    if (!secret) {
+      throw new Error('JWT_SECRET is not configured');
+    }
 
     const decoded = jwt.verify(token, secret) as {
       id: string;

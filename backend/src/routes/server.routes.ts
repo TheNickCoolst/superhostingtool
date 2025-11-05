@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { ServerController } from '../controllers/server.controller';
 import { authenticate } from '../middleware/auth.middleware';
+import {
+  createServerValidation,
+  updateServerValidation,
+  executeCommandValidation,
+  validateUUID
+} from '../middleware/validation.middleware';
 
 const router = Router();
 const serverController = new ServerController();
@@ -12,27 +18,27 @@ router.use(authenticate);
 router.get('/', serverController.getUserServers);
 
 // GET /api/servers/:id - Hole einen spezifischen Server
-router.get('/:id', serverController.getServerById);
+router.get('/:id', validateUUID, serverController.getServerById);
 
 // POST /api/servers - Erstelle einen neuen Server (One-Click!)
-router.post('/', serverController.createServer);
+router.post('/', createServerValidation, serverController.createServer);
 
 // PATCH /api/servers/:id/resources - Update Server-Ressourcen (RAM/CPU)
-router.patch('/:id/resources', serverController.updateResources);
+router.patch('/:id/resources', updateServerValidation, serverController.updateResources);
 
 // POST /api/servers/:id/start - Starte Server
-router.post('/:id/start', serverController.startServer);
+router.post('/:id/start', validateUUID, serverController.startServer);
 
 // POST /api/servers/:id/stop - Stoppe Server
-router.post('/:id/stop', serverController.stopServer);
+router.post('/:id/stop', validateUUID, serverController.stopServer);
 
 // POST /api/servers/:id/restart - Neustart mit minimaler Downtime
-router.post('/:id/restart', serverController.restartServer);
+router.post('/:id/restart', validateUUID, serverController.restartServer);
 
 // POST /api/servers/:id/command - Führe Minecraft-Befehl aus
-router.post('/:id/command', serverController.executeCommand);
+router.post('/:id/command', executeCommandValidation, serverController.executeCommand);
 
 // DELETE /api/servers/:id - Lösche Server
-router.delete('/:id', serverController.deleteServer);
+router.delete('/:id', validateUUID, serverController.deleteServer);
 
 export default router;

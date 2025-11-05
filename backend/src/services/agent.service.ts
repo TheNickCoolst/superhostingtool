@@ -151,10 +151,9 @@ export class AgentService {
    * Löscht einen Server Container komplett
    */
   async deleteServer(host: Host, server: MinecraftServer): Promise<AgentResponse> {
-    return this.sendCommand(host, AgentCommandType.CREATE_SERVER, {
+    return this.sendCommand(host, AgentCommandType.DELETE_SERVER, {
       serverId: server.id,
-      containerName: server.containerName,
-      delete: true
+      containerName: server.containerName
     });
   }
 

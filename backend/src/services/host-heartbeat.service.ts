@@ -1,6 +1,5 @@
-import { PrismaClient, HostStatus } from '@prisma/client';
+import { HostStatus } from '@prisma/client';
 
-const prisma = new PrismaClient();
 
 /**
  * Host Heartbeat Service
