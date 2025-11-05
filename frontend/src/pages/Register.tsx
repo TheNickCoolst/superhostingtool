@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -10,6 +10,14 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Check if this is the first user registration
+  const { data: setupData } = useQuery({
+    queryKey: ['setup'],
+    queryFn: () => api.get('/api/auth/setup').then(res => res.data)
+  });
+
+  const isFirstUser = setupData?.setupRequired === true;
 
   const registerMutation = useMutation({
     mutationFn: (data: any) => api.post('/api/auth/register', data),
@@ -28,9 +36,27 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
+          {isFirstUser && (
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-blue-900">Initial Setup</p>
+                  <p className="text-xs text-blue-700">You will be registered as the administrator</p>
+                </div>
+              </div>
+            </div>
+          )}
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
+            {isFirstUser ? 'Create Administrator Account' : 'Create your account'}
           </h2>
+          {isFirstUser && (
+            <p className="mt-2 text-center text-sm text-gray-600">
+              Welcome! Set up your admin account to get started
+            </p>
+          )}
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-2">

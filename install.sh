@@ -491,7 +491,9 @@ install_minimal() {
 show_menu() {
     print_header
 
-    echo -e "${BOLD}Wähle einen Installationsmodus:${NC}\n"
+    echo -e "${GREEN}${BOLD}💡 Tipp: Für eine super einfache Installation, nutze:${NC}"
+    echo -e "${BLUE}   ./quick-install.sh${NC}\n"
+    echo -e "${BOLD}Oder wähle einen erweiterten Installationsmodus:${NC}\n"
 
     echo -e "${CYAN}1)${NC} ${BOLD}Lokale Entwicklung${NC}"
     echo -e "   → Für Entwickler: Installiert alle Dependencies lokal"

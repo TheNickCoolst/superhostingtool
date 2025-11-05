@@ -5,6 +5,18 @@ import { body, validationResult } from 'express-validator';
 export class AuthController {
   private authService = new AuthService();
 
+  checkSetup = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const hasUsers = await this.authService.hasUsers();
+      res.json({
+        setupRequired: !hasUsers,
+        message: hasUsers ? 'System already configured' : 'First user registration required'
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   register = [
     body('email').isEmail().normalizeEmail(),
     body('username').isLength({ min: 3, max: 20 }).trim(),

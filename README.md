@@ -4,33 +4,46 @@ Eine skalierbare, professionelle Minecraft Hosting Plattform mit Multi-Host-Arch
 
 ## ⚡ SUPER EINFACHE INSTALLATION
 
-### 🚀 Option 1: One-Line Installation (EMPFOHLEN - 60 Sekunden!)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/superhostingtool/main/quick-start.sh | bash
-```
-
-**Das war's!** Der Installer macht alles automatisch:
-- ✅ Installiert Docker automatisch
-- ✅ Lädt das Projekt herunter
-- ✅ Konfiguriert alle Services
-- ✅ Startet die Plattform
-- ✅ Öffnet http://localhost in deinem Browser
-
-**Keine Konfiguration nötig!** ☕ Einfach zurücklehnen und warten.
-
----
-
-### 🖥️ Option 2: Lokale Installation
-
-Wenn du das Projekt schon heruntergeladen hast:
+### 🚀 Option 1: One-Click Installation (EMPFOHLEN - 60 Sekunden!)
 
 ```bash
 cd superhostingtool
-./quick-start.sh
+./quick-install.sh
 ```
 
-Oder mit dem interaktiven Installer:
+**Das war's!** Der Installer macht alles automatisch:
+- ✅ Installiert Node.js (falls nicht vorhanden)
+- ✅ Startet PostgreSQL via Docker
+- ✅ Konfiguriert alle Services (automatische Secrets)
+- ✅ Installiert alle Dependencies
+- ✅ Richtet die Datenbank ein
+
+**Keine Konfiguration nötig!** ☕ Danach einfach `npm run dev` starten.
+
+---
+
+### 🎯 Erster Start - Administrator Account
+
+Nach der Installation:
+
+```bash
+npm run dev
+```
+
+**Öffne:** http://localhost:5173
+
+🔑 **Der erste Benutzer wird automatisch zum Administrator!**
+- Registriere dich als erster → Du wirst Admin
+- Du bekommst 999 statt 9 Server-Slots
+- Voller Zugriff auf alle Admin-Funktionen
+
+Ähnlich wie bei **Pterodactyl Panel** - einfach und sicher!
+
+---
+
+### 🖥️ Option 2: Erweiterte Installation
+
+Für erweiterte Optionen (Docker, minimale Installation, etc.):
 
 ```bash
 ./install.sh
