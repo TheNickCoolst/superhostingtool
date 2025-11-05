@@ -124,34 +124,56 @@ export default function Dashboard() {
 
       {/* Recent Servers */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Servers</h2>
-        <div className="space-y-3">
-          {servers?.slice(0, 5).map((server: any) => (
-            <Link
-              key={server.id}
-              to={`/servers/${server.id}`}
-              className="block p-4 border border-gray-200 rounded-lg hover:border-minecraft-grass hover:shadow-md transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900">{server.name}</h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {server.version} • {server.allocatedRam / 1024}GB RAM • {server.allocatedCpu} CPU
-                  </p>
-                </div>
-                <div>
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    server.status === 'RUNNING' ? 'bg-green-100 text-green-800' :
-                    server.status === 'STOPPED' ? 'bg-gray-100 text-gray-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {server.status}
-                  </span>
-                </div>
-              </div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium text-gray-900">Recent Servers</h2>
+          {servers && servers.length > 5 && (
+            <Link to="/servers" className="text-sm text-minecraft-grass hover:text-green-700 font-medium">
+              View all →
             </Link>
-          ))}
+          )}
         </div>
+        {!servers || servers.length === 0 ? (
+          <div className="text-center py-8">
+            <Server className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+            <p className="text-sm text-gray-500 mb-4">
+              You haven't created any servers yet
+            </p>
+            <Link
+              to="/servers/create"
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-minecraft-grass hover:text-green-700"
+            >
+              Create your first server →
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {servers.slice(0, 5).map((server: any) => (
+              <Link
+                key={server.id}
+                to={`/servers/${server.id}`}
+                className="block p-4 border border-gray-200 rounded-lg hover:border-minecraft-grass hover:shadow-md transition-all"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">{server.name}</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {server.version} • {server.allocatedRam / 1024}GB RAM • {server.allocatedCpu} CPU
+                    </p>
+                  </div>
+                  <div>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                      server.status === 'RUNNING' ? 'bg-green-100 text-green-800' :
+                      server.status === 'STOPPED' ? 'bg-gray-100 text-gray-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {server.status}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
