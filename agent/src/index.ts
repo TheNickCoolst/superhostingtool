@@ -107,6 +107,43 @@ app.post('/api/command', authenticate, async (req: Request, res: Response) => {
         result = await monitoringService.getServerStats(payload.containerName);
         break;
 
+      // File Management Operations
+      case 'LIST_FILES' as any:
+        result = await dockerService.listFiles(payload.containerName, payload.path);
+        break;
+
+      case 'READ_FILE' as any:
+        result = await dockerService.readFile(payload.containerName, payload.filePath);
+        break;
+
+      case 'WRITE_FILE' as any:
+        result = await dockerService.writeFile(payload.containerName, payload.filePath, payload.content);
+        break;
+
+      case 'DELETE_FILE' as any:
+        result = await dockerService.deleteFile(payload.containerName, payload.filePath);
+        break;
+
+      case 'CREATE_DIRECTORY' as any:
+        result = await dockerService.createDirectory(payload.containerName, payload.dirPath);
+        break;
+
+      case 'UPLOAD_FILE' as any:
+        result = await dockerService.uploadFile(
+          payload.containerName,
+          payload.filePath,
+          Buffer.from(payload.content, 'base64')
+        );
+        break;
+
+      case 'DOWNLOAD_FILE' as any:
+        result = await dockerService.downloadFile(payload.containerName, payload.filePath);
+        break;
+
+      case 'GET_FILE_INFO' as any:
+        result = await dockerService.getFileInfo(payload.containerName, payload.filePath);
+        break;
+
       default:
         result = {
           success: false,

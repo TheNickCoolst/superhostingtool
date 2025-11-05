@@ -59,6 +59,19 @@ make help          # Alle verfügbaren Befehle
 - **Nutzer-Pools**: Jeder Nutzer kann bis zu 9 Server verwalten (konfigurierbar)
 - **DDoS-Schutz**: Rate Limiting und Ingress-Level-Protection
 
+### 🎉 Neue Features
+
+- **Server-Templates**: Vorkonfigurierte Server-Setups für schnelle Bereitstellung
+- **File Manager**: Web-basierter Datei-Browser zum Bearbeiten, Hochladen und Verwalten von Server-Dateien
+- **Player Management**: Whitelist, Banlist und Operator-Verwaltung direkt im Web-Interface
+- **Scheduled Tasks**: Zeitgesteuerte Aufgaben (Cron-Jobs) für Backups, Restarts, Commands und Ankündigungen
+- **Notification System**: E-Mail, Webhook und Discord-Benachrichtigungen für Server-Events
+- **Advanced Analytics**: Detaillierte Performance-Metriken mit historischen Trends und Grafiken
+- **Console Logs**: Durchsuchbare Server-Logs mit Filterung nach Level
+- **Live Console**: Echtzeit-Server-Konsole im Browser (geplant)
+- **World Import/Export**: Welten hoch- und herunterladen (über File Manager)
+- **Server Cloning**: Server duplizieren mit allen Einstellungen (geplant)
+
 ### 🎯 Besondere Highlights
 
 1. **Live Resource Updates**: Änderung von RAM/CPU ohne Neustart durch Docker's Update API
@@ -464,6 +477,77 @@ DELETE /api/backups/:backupId         # Backup löschen
 GET    /api/versions        # Alle Minecraft-Versionen
 GET    /api/versions/latest # Neueste stabile Version
 POST   /api/versions/sync   # Versionen synchronisieren (Admin)
+```
+
+#### **Templates**
+
+```http
+GET    /api/templates           # Alle öffentlichen Templates
+GET    /api/templates/:id       # Template Details
+POST   /api/templates           # Template erstellen
+PATCH  /api/templates/:id       # Template aktualisieren
+DELETE /api/templates/:id       # Template löschen
+POST   /api/templates/:id/download  # Download-Counter erhöhen
+```
+
+#### **Player Management**
+
+```http
+GET    /api/players/:serverId/whitelist    # Whitelist anzeigen
+POST   /api/players/:serverId/whitelist    # Spieler zur Whitelist hinzufügen
+DELETE /api/players/:serverId/whitelist/:playerName  # Spieler von Whitelist entfernen
+
+GET    /api/players/:serverId/bans         # Bans anzeigen
+POST   /api/players/:serverId/bans         # Spieler bannen
+DELETE /api/players/:serverId/bans/:playerName  # Ban aufheben
+
+GET    /api/players/:serverId/operators    # Operators anzeigen
+POST   /api/players/:serverId/operators    # Operator hinzufügen
+DELETE /api/players/:serverId/operators/:playerName  # Operator entfernen
+```
+
+#### **Scheduled Tasks**
+
+```http
+GET    /api/tasks/server/:serverId  # Alle Tasks für einen Server
+GET    /api/tasks/:id               # Task Details
+POST   /api/tasks                   # Task erstellen
+PATCH  /api/tasks/:id               # Task aktualisieren
+DELETE /api/tasks/:id               # Task löschen
+POST   /api/tasks/:id/trigger       # Task manuell ausführen
+```
+
+#### **Notifications**
+
+```http
+GET    /api/notifications           # Alle Notification-Configs des Users
+POST   /api/notifications           # Notification-Config erstellen
+PATCH  /api/notifications/:id       # Config aktualisieren
+DELETE /api/notifications/:id       # Config löschen
+```
+
+#### **Analytics**
+
+```http
+GET    /api/analytics/server/:serverId/metrics     # Performance-Metriken
+GET    /api/analytics/server/:serverId/stats       # Aggregierte Statistiken
+GET    /api/analytics/server/:serverId/trends      # Performance-Trends
+GET    /api/analytics/server/:serverId/logs        # Console Logs
+GET    /api/analytics/server/:serverId/logs/search # Logs durchsuchen
+GET    /api/analytics/server/:serverId/uptime      # Uptime-Statistiken
+```
+
+#### **File Manager**
+
+```http
+GET    /api/files/server/:serverId/list       # Dateien auflisten
+GET    /api/files/server/:serverId/read       # Datei lesen
+POST   /api/files/server/:serverId/write      # Datei schreiben
+DELETE /api/files/server/:serverId/file       # Datei löschen
+POST   /api/files/server/:serverId/directory  # Verzeichnis erstellen
+POST   /api/files/server/:serverId/upload     # Datei hochladen
+GET    /api/files/server/:serverId/download   # Datei herunterladen
+GET    /api/files/server/:serverId/info       # Datei-Informationen
 ```
 
 ### Beispiel: Server erstellen

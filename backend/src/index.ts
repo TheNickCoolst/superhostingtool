@@ -12,12 +12,19 @@ import hostRoutes from './routes/host.routes';
 import modRoutes from './routes/mod.routes';
 import backupRoutes from './routes/backup.routes';
 import versionRoutes from './routes/version.routes';
+import templateRoutes from './routes/template.routes';
+import playerRoutes from './routes/player.routes';
+import scheduledTaskRoutes from './routes/scheduled-task.routes';
+import notificationRoutes from './routes/notification.routes';
+import analyticsRoutes from './routes/analytics.routes';
+import fileRoutes from './routes/file.routes';
 
 import { errorHandler } from './middleware/error.middleware';
 import { rateLimiter } from './middleware/rateLimit.middleware';
 import { WebSocketService } from './services/websocket.service';
 import { BackupScheduler } from './services/backup.scheduler';
 import { HostHeartbeatService } from './services/host-heartbeat.service';
+import ScheduledTaskService from './services/scheduled-task.service';
 import { validateEnvironment } from './lib/env-validation';
 
 // Load environment variables
@@ -67,6 +74,12 @@ app.use('/api/hosts', hostRoutes);
 app.use('/api/mods', modRoutes);
 app.use('/api/backups', backupRoutes);
 app.use('/api/versions', versionRoutes);
+app.use('/api/templates', templateRoutes);
+app.use('/api/players', playerRoutes);
+app.use('/api/tasks', scheduledTaskRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/files', fileRoutes);
 
 // ==================== Error Handling ====================
 app.use(errorHandler);
@@ -94,6 +107,13 @@ const heartbeatService = new HostHeartbeatService();
 heartbeatService.start();
 console.log('💓 Host heartbeat service started');
 
+// Initialize scheduled tasks
+ScheduledTaskService.initializeTasks().then(() => {
+  console.log('⏰ Scheduled tasks initialized');
+}).catch((error) => {
+  console.error('Failed to initialize scheduled tasks:', error);
+});
+
 // ==================== Graceful Shutdown ====================
 process.on('SIGTERM', async () => {
   console.log('SIGTERM signal received: closing HTTP server');
@@ -102,6 +122,7 @@ process.on('SIGTERM', async () => {
   });
   backupScheduler.stop();
   heartbeatService.stop();
+  ScheduledTaskService.stopAll();
 });
 
 export default app;
