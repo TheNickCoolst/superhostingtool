@@ -6,6 +6,9 @@ import { registerValidation, loginValidation } from '../middleware/validation.mi
 const router = Router();
 const authController = new AuthController();
 
+// GET /api/auth/setup - Check if first user setup is required
+router.get('/setup', authController.checkSetup);
+
 // POST /api/auth/register - Benutzer registrieren
 router.post('/register', strictRateLimiter, registerValidation, authController.register);
 

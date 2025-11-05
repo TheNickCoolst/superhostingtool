@@ -18,17 +18,28 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Check if this is the first user - make them admin
+    const userCount = await prisma.user.count();
+    const isFirstUser = userCount === 0;
+
     const user = await prisma.user.create({
       data: {
         email,
         username,
-        password: hashedPassword
+        password: hashedPassword,
+        role: isFirstUser ? 'ADMIN' : 'USER',
+        maxServers: isFirstUser ? 999 : 9
       }
     });
 
     const token = this.generateToken(user);
 
     return { user, token };
+  }
+
+  async hasUsers(): Promise<boolean> {
+    const count = await prisma.user.count();
+    return count > 0;
   }
 
   async login(email: string, password: string): Promise<{ user: User; token: string }> {
