@@ -66,6 +66,10 @@ app.post('/api/command', authenticate, async (req: Request, res: Response) => {
         result = await dockerService.stopServer(payload.containerName);
         break;
 
+      case AgentCommandType.DELETE_SERVER:
+        result = await dockerService.deleteServer(payload.containerName);
+        break;
+
       case AgentCommandType.RESTART_SERVER:
         result = await dockerService.restartServer(payload.containerName, payload.graceful);
         break;

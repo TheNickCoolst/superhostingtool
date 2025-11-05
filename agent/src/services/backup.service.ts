@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import tar from 'tar-fs';
-import { createGzip } from 'zlib';
+import { createGzip, createGunzip } from 'zlib';
 import { pipeline } from 'stream/promises';
 import { DockerService } from './docker.service';
 import { AgentResponse } from '@minecraft-hosting/shared';
@@ -154,7 +154,7 @@ export class BackupService {
    */
   private async extractTarGz(archivePath: string, targetDir: string): Promise<void> {
     const source = fs.createReadStream(archivePath);
-    const gunzip = createGzip();
+    const gunzip = createGunzip();
     const extract = tar.extract(targetDir);
 
     await pipeline(source, gunzip, extract);

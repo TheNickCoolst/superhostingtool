@@ -1,7 +1,6 @@
 import axios from 'axios';
-import { PrismaClient, MinecraftVersionType } from '@prisma/client';
+import { MinecraftVersionType } from '@prisma/client';
 
-const prisma = new PrismaClient();
 
 interface MojangVersion {
   id: string;

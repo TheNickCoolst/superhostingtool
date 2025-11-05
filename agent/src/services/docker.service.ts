@@ -2,6 +2,7 @@ import Docker from 'dockerode';
 import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
+import crypto from 'crypto';
 import { AgentResponse } from '@minecraft-hosting/shared';
 
 /**
@@ -52,13 +53,17 @@ export class DockerService {
       // Download Minecraft Server JAR
       await this.downloadMinecraftServer(serverDir, minecraftVersion, versionType);
 
+      // Generiere sicheres RCON Passwort
+      const rconPassword = this.generateSecurePassword();
+
       // Erstelle server.properties
       await this.createServerProperties(serverDir, {
         port: 25565, // Interner Port (gemappt auf externen Port)
         maxPlayers,
         difficulty,
         gameMode,
-        enableWhitelist
+        enableWhitelist,
+        rconPassword
       });
 
       // Akzeptiere EULA
@@ -104,7 +109,8 @@ export class DockerService {
         message: 'Server created successfully',
         data: {
           containerId: container.id,
-          containerName
+          containerName,
+          rconPassword
         }
       };
     } catch (error: any) {
@@ -158,6 +164,55 @@ export class DockerService {
       return {
         success: true,
         message: 'Server stopped successfully'
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Löscht einen Server Container komplett
+   * 1. Stoppt den Container gracefully
+   * 2. Entfernt den Container
+   * 3. Löscht das Server-Verzeichnis (optional - auskommentiert für Sicherheit)
+   */
+  async deleteServer(containerName: string): Promise<AgentResponse> {
+    try {
+      const container = this.docker.getContainer(containerName);
+
+      // 1. Prüfe ob Container läuft und stoppe ihn
+      try {
+        const info = await container.inspect();
+        if (info.State.Running) {
+          await this.stopServer(containerName);
+          // Warte kurz nach dem Stop
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        // Container existiert möglicherweise nicht oder ist bereits gestoppt
+        console.log(`Container ${containerName} not running or doesn't exist`);
+      }
+
+      // 2. Entferne Container
+      await container.remove({ force: true });
+      console.log(`Container ${containerName} removed successfully`);
+
+      // 3. Optional: Lösche Server-Verzeichnis
+      // WICHTIG: Auskommentiert für Sicherheit - Server-Daten sollten
+      // nur nach expliziter Bestätigung gelöscht werden
+      // const serverId = containerName.replace('mc-', '').split('-')[0];
+      // const serverDir = path.join(this.baseDir, serverId);
+      // if (await fs.pathExists(serverDir)) {
+      //   await fs.remove(serverDir);
+      //   console.log(`Server directory ${serverDir} removed`);
+      // }
+
+      return {
+        success: true,
+        message: 'Server deleted successfully'
       };
     } catch (error: any) {
       return {
@@ -393,10 +448,17 @@ difficulty=${config.difficulty.toLowerCase()}
 gamemode=${config.gameMode.toLowerCase()}
 white-list=${config.enableWhitelist}
 enable-rcon=true
-rcon.password=minecraft
+rcon.password=${config.rconPassword}
 rcon.port=25575
     `.trim();
 
     await fs.writeFile(path.join(serverDir, 'server.properties'), properties);
+  }
+
+  /**
+   * Generiert ein sicheres zufälliges Passwort für RCON
+   */
+  private generateSecurePassword(length: number = 32): string {
+    return crypto.randomBytes(length).toString('base64').slice(0, length);
   }
 }

@@ -1,8 +1,7 @@
 import cron from 'node-cron';
-import { PrismaClient, ServerStatus, BackupType } from '@prisma/client';
+import { ServerStatus, BackupType } from '@prisma/client';
 import { AgentService } from './agent.service';
 
-const prisma = new PrismaClient();
 
 /**
  * Backup Scheduler

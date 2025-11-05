@@ -1,9 +1,8 @@
-import { PrismaClient, User } from '@prisma/client';
+import { User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../middleware/error.middleware';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export class AuthService {
   async register(email: string, username: string, password: string): Promise<{ user: User; token: string }> {
@@ -53,7 +52,10 @@ export class AuthService {
   }
 
   private generateToken(user: User): string {
-    const secret = process.env.JWT_SECRET || 'default-secret';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET is not configured. Please set JWT_SECRET environment variable.');
+    }
     const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
 
     return jwt.sign(

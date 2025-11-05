@@ -18,8 +18,13 @@ import { rateLimiter } from './middleware/rateLimit.middleware';
 import { WebSocketService } from './services/websocket.service';
 import { BackupScheduler } from './services/backup.scheduler';
 import { HostHeartbeatService } from './services/host-heartbeat.service';
+import { validateEnvironment } from './lib/env-validation';
 
+// Load environment variables
 dotenv.config();
+
+// Validate environment variables before starting the application
+validateEnvironment();
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
@@ -27,7 +32,25 @@ const WS_PORT = process.env.WS_PORT || 3001;
 
 // ==================== Middleware ====================
 app.use(helmet());
-app.use(cors());
+
+// Configure CORS with environment variables
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'];
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

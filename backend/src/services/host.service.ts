@@ -1,7 +1,7 @@
-import { PrismaClient, Host, HostStatus } from '@prisma/client';
+import { Host, HostStatus } from '@prisma/client';
 import { AppError } from '../middleware/error.middleware';
+import { prisma } from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 export class HostService {
   /**

@@ -1,11 +1,11 @@
-import { PrismaClient, MinecraftServer, ServerStatus, MinecraftVersionType } from '@prisma/client';
+import { MinecraftServer, ServerStatus, MinecraftVersionType } from '@prisma/client';
 import { AppError } from '../middleware/error.middleware';
+import { prisma } from '../lib/prisma';
 import { HostService } from './host.service';
 import { AgentService } from './agent.service';
 import { WebSocketService } from './websocket.service';
 import { WebSocketEvent } from '@minecraft-hosting/shared';
 
-const prisma = new PrismaClient();
 
 export interface CreateServerData {
   name: string;
@@ -367,19 +367,40 @@ export class ServerService {
     return server;
   }
 
+  /**
+   * Optimized port allocation - uses database query instead of iteration
+   * Finds the first available port in the range 25565-35565
+   */
   private async findAvailablePort(hostId: string): Promise<number> {
-    const existingServers = await prisma.minecraftServer.findMany({
+    const MIN_PORT = 25565;
+    const MAX_PORT = 35565;
+
+    // Get all used ports for this host, sorted
+    const usedPorts = await prisma.minecraftServer.findMany({
       where: { hostId },
-      select: { port: true }
+      select: { port: true },
+      orderBy: { port: 'asc' }
     });
 
-    const usedPorts = new Set(existingServers.map(s => s.port));
+    // If no ports are used, return the first one
+    if (usedPorts.length === 0) {
+      return MIN_PORT;
+    }
 
-    // Start bei Port 25565 (Standard Minecraft Port)
-    for (let port = 25565; port < 35565; port++) {
-      if (!usedPorts.has(port)) {
-        return port;
+    // Find the first gap in the sequence
+    let expectedPort = MIN_PORT;
+    for (const server of usedPorts) {
+      if (server.port === expectedPort) {
+        expectedPort++;
+      } else if (server.port > expectedPort) {
+        // Found a gap
+        return expectedPort;
       }
+    }
+
+    // No gaps found, use the next port after the last one
+    if (expectedPort <= MAX_PORT) {
+      return expectedPort;
     }
 
     throw new AppError('No available ports on this host', 503);
