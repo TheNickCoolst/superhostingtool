@@ -7,7 +7,6 @@ import Dashboard from './pages/Dashboard';
 import Servers from './pages/Servers';
 import CreateServer from './pages/CreateServer';
 import ServerDetails from './pages/ServerDetails';
-import Mods from './pages/Mods';
 
 function App() {
   const { user, loading } = useAuth();
@@ -37,7 +36,6 @@ function App() {
         <Route path="/servers" element={<Servers />} />
         <Route path="/servers/create" element={<CreateServer />} />
         <Route path="/servers/:id" element={<ServerDetails />} />
-        <Route path="/mods" element={<Mods />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Layout>

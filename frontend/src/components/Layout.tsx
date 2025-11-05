@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Server, Package, Home, LogOut } from 'lucide-react';
+import { Server, Home, LogOut } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -13,8 +13,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
-    { name: 'Servers', href: '/servers', icon: Server },
-    { name: 'Mods', href: '/mods', icon: Package }
+    { name: 'Servers', href: '/servers', icon: Server }
   ];
 
   return (
