@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Superhostingtool - Setup Wizard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .logo {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .option-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 15px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .option-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .option-card.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .option-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .option-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .badge.recommended {
+            background: #10b981;
+            color: white;
+        }
+
+        .badge.easy {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .badge.advanced {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            justify-content: space-between;
+        }
+
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        button.primary {
+            background: #667eea;
+            color: white;
+        }
+
+        button.primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button.secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        button.secondary:hover {
+            background: #d0d0d0;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .command-box {
+            background: #1e293b;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .command-box code {
+            display: block;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 6px 12px;
+            font-size: 0.9em;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+        }
+
+        .requirements {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .requirements h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .requirements ul {
+            margin-left: 20px;
+            color: #856404;
+        }
+
+        .success-icon {
+            font-size: 5em;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .system-check {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            background: #f5f5f5;
+        }
+
+        .system-check.ok {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .system-check.missing {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .emoji {
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🚀</div>
+            <h1>Superhostingtool Setup</h1>
+            <p>Installation in 3 einfachen Schritten</p>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress" style="width: 33%"></div>
+        </div>
+
+        <!-- Schritt 1: Installationstyp wählen -->
+        <div class="step active" id="step1">
+            <h2 style="margin-bottom: 20px;">🎯 Wähle deinen Installationstyp</h2>
+
+            <div class="option-card" onclick="selectOption('docker')">
+                <h3>
+                    🐳 Docker Installation
+                    <span class="badge recommended">EMPFOHLEN</span>
+                </h3>
+                <p>
+                    <strong>Perfekt für:</strong> Einsteiger und Produktion<br>
+                    <strong>Benötigt:</strong> Nur Docker & Docker Compose<br>
+                    <strong>Vorteile:</strong> Alles funktioniert "out of the box", keine Konfiguration nötig<br>
+                    <strong>Dauer:</strong> 2-3 Minuten
+                </p>
+            </div>
+
+            <div class="option-card" onclick="selectOption('local')">
+                <h3>
+                    💻 Lokale Entwicklung
+                    <span class="badge easy">ENTWICKLER</span>
+                </h3>
+                <p>
+                    <strong>Perfekt für:</strong> Entwickler mit Hot-Reload<br>
+                    <strong>Benötigt:</strong> Node.js 18+, PostgreSQL 15+<br>
+                    <strong>Vorteile:</strong> Volle Kontrolle, Live-Reload während Entwicklung<br>
+                    <strong>Dauer:</strong> 5-7 Minuten
+                </p>
+            </div>
+
+            <div class="option-card" onclick="selectOption('kubernetes')">
+                <h3>
+                    ☸️ Kubernetes Deployment
+                    <span class="badge advanced">FORTGESCHRITTEN</span>
+                </h3>
+                <p>
+                    <strong>Perfekt für:</strong> Production mit Auto-Scaling<br>
+                    <strong>Benötigt:</strong> Kubernetes Cluster<br>
+                    <strong>Vorteile:</strong> High Availability, Auto-Scaling, Load Balancing<br>
+                    <strong>Dauer:</strong> 10-15 Minuten
+                </p>
+            </div>
+
+            <div class="button-group">
+                <button class="secondary" disabled>Zurück</button>
+                <button class="primary" onclick="nextStep()" id="nextBtn1" disabled>Weiter →</button>
+            </div>
+        </div>
+
+        <!-- Schritt 2: System Check -->
+        <div class="step" id="step2">
+            <h2 style="margin-bottom: 20px;">🔍 System-Überprüfung</h2>
+
+            <p style="margin-bottom: 20px;">Prüfe ob alle Voraussetzungen erfüllt sind...</p>
+
+            <div id="systemChecks"></div>
+
+            <div class="button-group">
+                <button class="secondary" onclick="prevStep()">← Zurück</button>
+                <button class="primary" onclick="nextStep()" id="nextBtn2">Weiter →</button>
+            </div>
+        </div>
+
+        <!-- Schritt 3: Installation -->
+        <div class="step" id="step3">
+            <h2 style="margin-bottom: 20px;">🚀 Installation</h2>
+
+            <div id="installInstructions"></div>
+
+            <div class="button-group">
+                <button class="secondary" onclick="prevStep()">← Zurück</button>
+                <button class="primary" onclick="window.location.href='http://localhost'">Zum Dashboard →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let selectedOption = null;
+
+        function selectOption(option) {
+            selectedOption = option;
+
+            // Remove previous selection
+            document.querySelectorAll('.option-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Add selection to clicked card
+            event.currentTarget.classList.add('selected');
+
+            // Enable next button
+            document.getElementById('nextBtn1').disabled = false;
+        }
+
+        function nextStep() {
+            if (currentStep === 1 && !selectedOption) return;
+
+            // Hide current step
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+
+            // Move to next step
+            currentStep++;
+
+            // Show next step
+            document.getElementById(`step${currentStep}`).classList.add('active');
+
+            // Update progress bar
+            document.getElementById('progress').style.width = `${(currentStep / 3) * 100}%`;
+
+            // Run step-specific logic
+            if (currentStep === 2) {
+                runSystemCheck();
+            } else if (currentStep === 3) {
+                showInstallInstructions();
+            }
+        }
+
+        function prevStep() {
+            // Hide current step
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+
+            // Move to previous step
+            currentStep--;
+
+            // Show previous step
+            document.getElementById(`step${currentStep}`).classList.add('active');
+
+            // Update progress bar
+            document.getElementById('progress').style.width = `${(currentStep / 3) * 100}%`;
+        }
+
+        function runSystemCheck() {
+            const checksDiv = document.getElementById('systemChecks');
+
+            const checks = {
+                docker: {
+                    name: 'Docker',
+                    required: selectedOption === 'docker' || selectedOption === 'kubernetes',
+                    installed: false
+                },
+                nodejs: {
+                    name: 'Node.js 18+',
+                    required: selectedOption === 'local',
+                    installed: false
+                },
+                postgres: {
+                    name: 'PostgreSQL 15+',
+                    required: selectedOption === 'local',
+                    installed: false
+                },
+                kubernetes: {
+                    name: 'Kubernetes',
+                    required: selectedOption === 'kubernetes',
+                    installed: false
+                }
+            };
+
+            let html = '';
+            for (const [key, check] of Object.entries(checks)) {
+                if (check.required) {
+                    const status = check.installed ? 'ok' : 'missing';
+                    const icon = check.installed ? '✅' : '⚠️';
+                    html += `
+                        <div class="system-check ${status}">
+                            <span><span class="emoji">${icon}</span> ${check.name}</span>
+                            <span>${check.installed ? 'Installiert' : 'Fehlt'}</span>
+                        </div>
+                    `;
+                }
+            }
+
+            checksDiv.innerHTML = html;
+        }
+
+        function showInstallInstructions() {
+            const instructionsDiv = document.getElementById('installInstructions');
+
+            let instructions = '';
+
+            if (selectedOption === 'docker') {
+                instructions = `
+                    <div class="success-icon">🎉</div>
+                    <h3 style="text-align: center; margin-bottom: 20px;">Bereit für die Installation!</h3>
+
+                    <p style="margin-bottom: 20px;">Kopiere diesen Befehl und führe ihn in deinem Terminal aus:</p>
+
+                    <div class="command-box">
+                        <button class="copy-button primary" onclick="copyCommand('docker')">Kopieren</button>
+                        <code id="dockerCommand">curl -fsSL https://raw.githubusercontent.com/yourusername/superhostingtool/main/quick-start.sh | bash</code>
+                    </div>
+
+                    <p><strong>Oder lokal:</strong></p>
+                    <div class="command-box">
+                        <button class="copy-button primary" onclick="copyCommand('local')">Kopieren</button>
+                        <code id="localCommand">cd /pfad/zu/superhostingtool && ./quick-start.sh</code>
+                    </div>
+
+                    <div class="requirements">
+                        <h4>📋 Was passiert:</h4>
+                        <ul>
+                            <li>Docker wird automatisch installiert (falls nicht vorhanden)</li>
+                            <li>Das Projekt wird heruntergeladen</li>
+                            <li>Alle Services werden automatisch konfiguriert</li>
+                            <li>Die Plattform wird gestartet</li>
+                        </ul>
+                    </div>
+                `;
+            } else if (selectedOption === 'local') {
+                instructions = `
+                    <div class="success-icon">💻</div>
+                    <h3 style="text-align: center; margin-bottom: 20px;">Lokale Entwicklung Setup</h3>
+
+                    <div class="command-box">
+                        <button class="copy-button primary" onclick="copyCommand('dev')">Kopieren</button>
+                        <code id="devCommand">cd /pfad/zu/superhostingtool && ./install.sh --local</code>
+                    </div>
+
+                    <div class="requirements">
+                        <h4>📋 Voraussetzungen:</h4>
+                        <ul>
+                            <li>Node.js 18+ installieren: <a href="https://nodejs.org" target="_blank">nodejs.org</a></li>
+                            <li>PostgreSQL 15+ installieren (oder Docker verwenden)</li>
+                            <li>Git für Versionskontrolle</li>
+                        </ul>
+                    </div>
+
+                    <p style="margin-top: 20px;"><strong>Nach der Installation:</strong></p>
+                    <div class="command-box">
+                        <code>npm run dev</code>
+                    </div>
+                `;
+            } else if (selectedOption === 'kubernetes') {
+                instructions = `
+                    <div class="success-icon">☸️</div>
+                    <h3 style="text-align: center; margin-bottom: 20px;">Kubernetes Deployment</h3>
+
+                    <div class="command-box">
+                        <button class="copy-button primary" onclick="copyCommand('k8s')">Kopieren</button>
+                        <code id="k8sCommand">kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/postgres-deployment.yaml
+kubectl apply -f k8s/backend-deployment.yaml
+kubectl apply -f k8s/frontend-deployment.yaml
+kubectl apply -f k8s/agent-daemonset.yaml
+kubectl apply -f k8s/ingress.yaml</code>
+                    </div>
+
+                    <div class="requirements">
+                        <h4>⚠️ Wichtig vor dem Deployment:</h4>
+                        <ul>
+                            <li>Secrets in den YAML-Dateien anpassen!</li>
+                            <li>Ingress Domain konfigurieren</li>
+                            <li>Storage Class für PostgreSQL prüfen</li>
+                            <li>SSL/TLS Zertifikate einrichten (cert-manager)</li>
+                        </ul>
+                    </div>
+
+                    <p style="margin-top: 20px;"><strong>Status prüfen:</strong></p>
+                    <div class="command-box">
+                        <code>kubectl get pods -n minecraft-hosting</code>
+                    </div>
+                `;
+            }
+
+            instructionsDiv.innerHTML = instructions;
+        }
+
+        function copyCommand(type) {
+            let command = '';
+            if (type === 'docker') {
+                command = document.getElementById('dockerCommand').textContent;
+            } else if (type === 'local') {
+                command = document.getElementById('localCommand').textContent;
+            } else if (type === 'dev') {
+                command = document.getElementById('devCommand').textContent;
+            } else if (type === 'k8s') {
+                command = document.getElementById('k8sCommand').textContent;
+            }
+
+            navigator.clipboard.writeText(command).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Kopiert!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

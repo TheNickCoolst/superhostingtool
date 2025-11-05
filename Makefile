@@ -1,30 +1,68 @@
 # Minecraft Hosting Platform - Makefile
 # Vereinfacht häufig verwendete Befehle
 
-.PHONY: help install dev start stop logs health clean test build docker-up docker-down
+.PHONY: help install quickstart check-system start stop logs health clean test build docker-up docker-down wizard
 
 # Farben für Ausgabe
 BLUE := \033[0;34m
 GREEN := \033[0;32m
 YELLOW := \033[1;33m
+PURPLE := \033[0;35m
+BOLD := \033[1m
 NC := \033[0m
 
 help: ## Zeigt diese Hilfe an
 	@echo ""
-	@echo "$(BLUE)╔═══════════════════════════════════════════════════════════════╗$(NC)"
-	@echo "$(BLUE)║     Minecraft Hosting Platform - Available Commands          ║$(NC)"
-	@echo "$(BLUE)╚═══════════════════════════════════════════════════════════════╝$(NC)"
+	@echo "$(PURPLE)$(BOLD)╔═══════════════════════════════════════════════════════════════╗$(NC)"
+	@echo "$(PURPLE)$(BOLD)║     🚀 Superhostingtool - Verfügbare Befehle 🚀              ║$(NC)"
+	@echo "$(PURPLE)$(BOLD)╚═══════════════════════════════════════════════════════════════╝$(NC)"
 	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}'
+	@echo "$(BLUE)$(BOLD)📦 SCHNELLSTART (für neue Benutzer):$(NC)"
+	@echo "  $(GREEN)make quickstart$(NC)      - Super einfache Installation (60 Sekunden!)"
+	@echo "  $(GREEN)make wizard$(NC)          - Web-basierter Setup Wizard"
+	@echo "  $(GREEN)make check-system$(NC)    - System-Voraussetzungen prüfen"
+	@echo ""
+	@echo "$(BLUE)$(BOLD)⚙️  INSTALLATION:$(NC)"
+	@grep -E '^install.*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
+	@echo ""
+	@echo "$(BLUE)$(BOLD)🎮 BETRIEB:$(NC)"
+	@grep -E '^(start|stop|restart|status):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
+	@echo ""
+	@echo "$(BLUE)$(BOLD)🛠️  ENTWICKLUNG:$(NC)"
+	@grep -E '^(dev|build|test).*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
+	@echo ""
+	@echo "$(BLUE)$(BOLD)🐳 DOCKER:$(NC)"
+	@grep -E '^docker-.*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
+	@echo ""
+	@echo "$(BLUE)$(BOLD)💾 DATENBANK:$(NC)"
+	@grep -E '^(db-|migrate).*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
+	@echo ""
+	@echo "$(YELLOW)Tipp: Starte mit '$(GREEN)make quickstart$(YELLOW)' für die einfachste Installation!$(NC)"
 	@echo ""
 
-install: ## Führt die One-Click-Installation aus
+quickstart: ## 🚀 Super einfache One-Line Installation (EMPFOHLEN!)
+	@./quick-start.sh
+
+check-system: ## 🔍 Prüft System-Voraussetzungen
+	@./check-system.sh
+
+wizard: ## 🌐 Öffnet Web-basierten Setup Wizard
+	@echo "$(BLUE)Öffne Setup Wizard...$(NC)"
+	@if command -v xdg-open > /dev/null; then \
+		xdg-open setup-wizard.html; \
+	elif command -v open > /dev/null; then \
+		open setup-wizard.html; \
+	else \
+		echo "$(YELLOW)Bitte öffne 'setup-wizard.html' manuell in deinem Browser$(NC)"; \
+	fi
+
+install: ## Interaktive Installation
 	@./install.sh
 
-install-docker: ## Installiert mit Docker Compose
+install-docker: ## Installation mit Docker Compose
 	@./install.sh --docker
 
-install-local: ## Installiert für lokale Entwicklung
+install-local: ## Installation für lokale Entwicklung
 	@./install.sh --local
 
 dev: ## Startet die Entwicklungsumgebung
@@ -39,13 +77,13 @@ dev-frontend: ## Startet nur Frontend
 dev-agent: ## Startet nur Agent
 	@./scripts/dev.sh agent
 
-start: ## Startet die Produktion
-	@./scripts/start.sh
+start: ## ▶️  Startet alle Services
+	@./start.sh
 
-stop: ## Stoppt alle Services
-	@./scripts/stop.sh
+stop: ## ⏹️  Stoppt alle Services
+	@./stop.sh
 
-restart: stop start ## Neustart aller Services
+restart: stop start ## 🔄 Neustart aller Services
 
 logs: ## Zeigt Logs an
 	@./scripts/logs.sh

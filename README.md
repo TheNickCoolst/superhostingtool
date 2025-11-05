@@ -1,32 +1,78 @@
-# Minecraft Hosting Platform
+# Minecraft Hosting Platform 🎮
 
 Eine skalierbare, professionelle Minecraft Hosting Plattform mit Multi-Host-Architektur, dynamischer Ressourcenverwaltung und minimaler Downtime.
 
-## 🚀 Quick Start
+## ⚡ SUPER EINFACHE INSTALLATION
 
-**One-Click Installation:**
+### 🚀 Option 1: One-Line Installation (EMPFOHLEN - 60 Sekunden!)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yourusername/superhostingtool/main/quick-start.sh | bash
+```
+
+**Das war's!** Der Installer macht alles automatisch:
+- ✅ Installiert Docker automatisch
+- ✅ Lädt das Projekt herunter
+- ✅ Konfiguriert alle Services
+- ✅ Startet die Plattform
+- ✅ Öffnet http://localhost in deinem Browser
+
+**Keine Konfiguration nötig!** ☕ Einfach zurücklehnen und warten.
+
+---
+
+### 🖥️ Option 2: Lokale Installation
+
+Wenn du das Projekt schon heruntergeladen hast:
+
+```bash
+cd superhostingtool
+./quick-start.sh
+```
+
+Oder mit dem interaktiven Installer:
 
 ```bash
 ./install.sh
 ```
 
-Das war's! Das Installationsskript führt dich durch den kompletten Setup-Prozess.
+---
 
-**Schnelle Optionen:**
-- `./install.sh --docker` - Docker Compose Installation (empfohlen)
-- `./install.sh --local` - Lokale Entwicklungsumgebung
-- `./install.sh --check` - System-Voraussetzungen prüfen
+### 🌐 Option 3: Web-basierter Setup Wizard
 
-**Oder mit Make:**
+Öffne einfach `setup-wizard.html` in deinem Browser für eine geführte Installation mit grafischer Oberfläche!
+
 ```bash
-make install        # Interaktive Installation
-make install-docker # Docker Installation
-make install-local  # Lokale Installation
-make dev           # Entwicklung starten
-make help          # Alle verfügbaren Befehle
+# Öffne die Datei in deinem Browser:
+open setup-wizard.html        # macOS
+xdg-open setup-wizard.html    # Linux
 ```
 
-📖 **Mehr Details:** Siehe [QUICKSTART.md](./QUICKSTART.md) für eine vollständige Anleitung.
+---
+
+### 📱 Quick Commands (nachdem installiert)
+
+```bash
+# Starten
+docker-compose up -d
+
+# Stoppen
+docker-compose down
+
+# Logs ansehen
+docker-compose logs -f
+
+# Status prüfen
+docker-compose ps
+```
+
+**Frontend:** http://localhost
+**Backend API:** http://localhost:3000
+**Dokumentation:** [QUICKSTART.md](./QUICKSTART.md)
+
+---
+
+## 🎯 Was ist Superhostingtool?
 
 ---
 
