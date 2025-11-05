@@ -1,13 +1,35 @@
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { Server, HardDrive, Cpu, Activity } from 'lucide-react';
+import { Server, HardDrive, Cpu, Activity, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import Onboarding from '../components/Onboarding';
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
   const { data: servers } = useQuery({
     queryKey: ['servers'],
     queryFn: () => api.get('/api/servers').then(res => res.data.servers)
   });
+
+  // Check if user should see onboarding
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+    const justRegistered = localStorage.getItem('justRegistered');
+
+    if (!hasSeenOnboarding || justRegistered === 'true') {
+      setShowOnboarding(true);
+      localStorage.removeItem('justRegistered');
+    }
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('hasSeenOnboarding', 'true');
+    setShowOnboarding(false);
+  };
 
   const stats = {
     totalServers: servers?.length || 0,
@@ -17,13 +39,28 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="px-4 py-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-sm text-gray-700">
-          Manage your Minecraft servers
-        </p>
-      </div>
+    <>
+      {showOnboarding && user && (
+        <Onboarding user={user} onComplete={handleOnboardingComplete} />
+      )}
+
+      <div className="px-4 py-6">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="mt-2 text-sm text-gray-700">
+              Manage your Minecraft servers
+            </p>
+          </div>
+          <button
+            onClick={() => setShowOnboarding(true)}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            title="Einführung anzeigen"
+          >
+            <HelpCircle className="w-4 h-4 mr-2" />
+            Hilfe & Tour
+          </button>
+        </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -175,6 +212,7 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
