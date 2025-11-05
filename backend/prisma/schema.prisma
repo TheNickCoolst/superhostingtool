@@ -89,6 +89,12 @@ model MinecraftServer {
   mods              ServerMod[]
   backups           Backup[]
   stats             ServerStats?
+  whitelist         PlayerWhitelist[]
+  bans              PlayerBan[]
+  operators         PlayerOperator[]
+  scheduledTasks    ScheduledTask[]
+  metrics           ServerMetrics[]
+  consoleLogs       ConsoleLog[]
 
   @@index([userId])
   @@index([hostId])
@@ -228,4 +234,178 @@ model MinecraftVersion {
 
   @@index([type])
   @@index([version])
+}
+
+// ==================== Server Template Models ====================
+model ServerTemplate {
+  id                String              @id @default(uuid())
+  name              String
+  description       String
+  minecraftVersion  String
+  versionType       MinecraftVersionType
+  allocatedRam      Int                 // in MB
+  allocatedCpu      Float
+  maxPlayers        Int                 @default(20)
+  difficulty        Difficulty          @default(NORMAL)
+  gameMode          GameMode            @default(SURVIVAL)
+  enableWhitelist   Boolean             @default(false)
+  preInstalledMods  String[]            @default([])
+  serverProperties  Json?               // Custom server.properties
+  isPublic          Boolean             @default(true)
+  createdBy         String?
+  downloads         Int                 @default(0)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([isPublic])
+  @@index([versionType])
+}
+
+// ==================== Player Management Models ====================
+model PlayerWhitelist {
+  id          String          @id @default(uuid())
+  serverId    String
+  playerName  String
+  playerUuid  String?
+  addedAt     DateTime        @default(now())
+
+  server      MinecraftServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, playerName])
+  @@index([serverId])
+}
+
+model PlayerBan {
+  id          String          @id @default(uuid())
+  serverId    String
+  playerName  String
+  playerUuid  String?
+  reason      String?
+  bannedBy    String?
+  expiresAt   DateTime?
+  createdAt   DateTime        @default(now())
+
+  server      MinecraftServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, playerName])
+  @@index([serverId])
+}
+
+model PlayerOperator {
+  id          String          @id @default(uuid())
+  serverId    String
+  playerName  String
+  playerUuid  String?
+  level       Int             @default(4)
+  addedAt     DateTime        @default(now())
+
+  server      MinecraftServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, playerName])
+  @@index([serverId])
+}
+
+// ==================== Scheduled Task Models ====================
+model ScheduledTask {
+  id            String          @id @default(uuid())
+  serverId      String
+  name          String
+  taskType      TaskType
+  cronExpression String
+  command       String?
+  enabled       Boolean         @default(true)
+  lastRun       DateTime?
+  nextRun       DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  server        MinecraftServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+  @@index([enabled])
+  @@index([nextRun])
+}
+
+enum TaskType {
+  BACKUP
+  RESTART
+  COMMAND
+  ANNOUNCEMENT
+}
+
+// ==================== Notification Models ====================
+model NotificationConfig {
+  id          String              @id @default(uuid())
+  userId      String
+  serverId    String?
+  type        NotificationType
+  enabled     Boolean             @default(true)
+  email       String?
+  webhookUrl  String?
+  events      NotificationEvent[] @default([])
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([serverId])
+}
+
+enum NotificationType {
+  EMAIL
+  WEBHOOK
+  DISCORD
+}
+
+enum NotificationEvent {
+  SERVER_STARTED
+  SERVER_STOPPED
+  SERVER_CRASHED
+  BACKUP_COMPLETED
+  BACKUP_FAILED
+  PLAYER_JOINED
+  PLAYER_LEFT
+  HIGH_CPU_USAGE
+  HIGH_RAM_USAGE
+  LOW_TPS
+}
+
+// ==================== Advanced Analytics Models ====================
+model ServerMetrics {
+  id              String          @id @default(uuid())
+  serverId        String
+  timestamp       DateTime        @default(now())
+  cpuUsage        Float
+  ramUsage        Int
+  diskUsage       Int?
+  tps             Float
+  onlinePlayers   Int
+  chunks          Int?
+  entities        Int?
+  tileEntities    Int?
+
+  server          MinecraftServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, timestamp])
+  @@index([timestamp])
+}
+
+model ConsoleLog {
+  id          String          @id @default(uuid())
+  serverId    String
+  message     String
+  level       LogLevel        @default(INFO)
+  timestamp   DateTime        @default(now())
+
+  server      MinecraftServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, timestamp])
+  @@index([timestamp])
+}
+
+enum LogLevel {
+  INFO
+  WARNING
+  ERROR
+  SEVERE
+  DEBUG
 }

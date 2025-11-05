@@ -22,6 +22,7 @@
     "ws": "^8.16.0",
     "axios": "^1.6.5",
     "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.8",
     "compression": "^1.7.4",
     "express-rate-limit": "^7.1.5",
     "express-validator": "^7.0.1"
@@ -35,6 +36,7 @@
     "@types/ws": "^8.5.10",
     "@types/node": "^20.11.0",
     "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^6.4.14",
     "@types/compression": "^1.7.5",
     "prisma": "^5.8.0",
     "ts-node": "^10.9.2",

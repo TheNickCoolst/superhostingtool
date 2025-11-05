@@ -168,6 +168,116 @@ export class AgentService {
   }
 
   /**
+   * File Manager Operations
+   */
+
+  async listFiles(hostId: string, containerName: string, path: string): Promise<any> {
+    const host = await this.getHost(hostId);
+    return this.sendRawCommand(host, 'LIST_FILES', {
+      containerName,
+      path
+    });
+  }
+
+  async readFile(hostId: string, containerName: string, filePath: string): Promise<any> {
+    const host = await this.getHost(hostId);
+    return this.sendRawCommand(host, 'READ_FILE', {
+      containerName,
+      filePath
+    });
+  }
+
+  async writeFile(hostId: string, containerName: string, filePath: string, content: string): Promise<any> {
+    const host = await this.getHost(hostId);
+    return this.sendRawCommand(host, 'WRITE_FILE', {
+      containerName,
+      filePath,
+      content
+    });
+  }
+
+  async deleteFile(hostId: string, containerName: string, filePath: string): Promise<any> {
+    const host = await this.getHost(hostId);
+    return this.sendRawCommand(host, 'DELETE_FILE', {
+      containerName,
+      filePath
+    });
+  }
+
+  async createDirectory(hostId: string, containerName: string, dirPath: string): Promise<any> {
+    const host = await this.getHost(hostId);
+    return this.sendRawCommand(host, 'CREATE_DIRECTORY', {
+      containerName,
+      dirPath
+    });
+  }
+
+  async uploadFile(hostId: string, containerName: string, filePath: string, fileBuffer: Buffer): Promise<any> {
+    const host = await this.getHost(hostId);
+    return this.sendRawCommand(host, 'UPLOAD_FILE', {
+      containerName,
+      filePath,
+      content: fileBuffer.toString('base64')
+    });
+  }
+
+  async downloadFile(hostId: string, containerName: string, filePath: string): Promise<any> {
+    const host = await this.getHost(hostId);
+    return this.sendRawCommand(host, 'DOWNLOAD_FILE', {
+      containerName,
+      filePath
+    });
+  }
+
+  async getFileInfo(hostId: string, containerName: string, filePath: string): Promise<any> {
+    const host = await this.getHost(hostId);
+    return this.sendRawCommand(host, 'GET_FILE_INFO', {
+      containerName,
+      filePath
+    });
+  }
+
+  /**
+   * Helper method to get host by ID
+   */
+  private async getHost(hostId: string): Promise<Host> {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    const host = await prisma.host.findUnique({ where: { id: hostId } });
+    if (!host) {
+      throw new Error('Host not found');
+    }
+    return host;
+  }
+
+  /**
+   * Send raw command (for new commands not in AgentCommandType enum)
+   */
+  private async sendRawCommand(host: Host, type: string, payload: any): Promise<any> {
+    try {
+      const response = await axios.post(
+        `http://${host.ipAddress}:4000/api/command`,
+        {
+          type,
+          payload
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${host.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      console.error(`Agent command failed for host ${host.name}:`, error.message);
+      throw new Error(`Failed to communicate with host agent: ${error.message}`);
+    }
+  }
+
+  /**
    * Sendet einen Befehl an den Host-Agent
    */
   private async sendCommand(host: Host, type: AgentCommandType, payload: any): Promise<AgentResponse> {

@@ -461,4 +461,279 @@ rcon.port=25575
   private generateSecurePassword(length: number = 32): string {
     return crypto.randomBytes(length).toString('base64').slice(0, length);
   }
+
+  // ==================== File Management Operations ====================
+
+  /**
+   * Lists files in a directory within the container
+   */
+  async listFiles(containerName: string, dirPath: string): Promise<AgentResponse> {
+    try {
+      const container = this.docker.getContainer(containerName);
+
+      const exec = await container.exec({
+        Cmd: ['ls', '-la', dirPath],
+        AttachStdout: true,
+        AttachStderr: true
+      });
+
+      const stream = await exec.start({ hijack: true, stdin: false });
+
+      return new Promise((resolve, reject) => {
+        let output = '';
+        stream.on('data', (chunk: Buffer) => {
+          output += chunk.toString();
+        });
+
+        stream.on('end', () => {
+          resolve({
+            success: true,
+            data: { files: output }
+          });
+        });
+
+        stream.on('error', reject);
+      });
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Failed to list files: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Reads a file from the container
+   */
+  async readFile(containerName: string, filePath: string): Promise<AgentResponse> {
+    try {
+      const container = this.docker.getContainer(containerName);
+
+      const exec = await container.exec({
+        Cmd: ['cat', filePath],
+        AttachStdout: true,
+        AttachStderr: true
+      });
+
+      const stream = await exec.start({ hijack: true, stdin: false });
+
+      return new Promise((resolve, reject) => {
+        let output = '';
+        stream.on('data', (chunk: Buffer) => {
+          output += chunk.toString();
+        });
+
+        stream.on('end', () => {
+          resolve({
+            success: true,
+            data: { content: output }
+          });
+        });
+
+        stream.on('error', reject);
+      });
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Failed to read file: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Writes content to a file in the container
+   */
+  async writeFile(containerName: string, filePath: string, content: string): Promise<AgentResponse> {
+    try {
+      const container = this.docker.getContainer(containerName);
+
+      // Use echo with base64 to handle special characters
+      const base64Content = Buffer.from(content).toString('base64');
+
+      const exec = await container.exec({
+        Cmd: ['sh', '-c', `echo "${base64Content}" | base64 -d > ${filePath}`],
+        AttachStdout: true,
+        AttachStderr: true
+      });
+
+      await exec.start({ hijack: true, stdin: false });
+
+      return {
+        success: true,
+        message: 'File written successfully'
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Failed to write file: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Deletes a file from the container
+   */
+  async deleteFile(containerName: string, filePath: string): Promise<AgentResponse> {
+    try {
+      const container = this.docker.getContainer(containerName);
+
+      const exec = await container.exec({
+        Cmd: ['rm', '-f', filePath],
+        AttachStdout: true,
+        AttachStderr: true
+      });
+
+      await exec.start({ hijack: true, stdin: false });
+
+      return {
+        success: true,
+        message: 'File deleted successfully'
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Failed to delete file: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Creates a directory in the container
+   */
+  async createDirectory(containerName: string, dirPath: string): Promise<AgentResponse> {
+    try {
+      const container = this.docker.getContainer(containerName);
+
+      const exec = await container.exec({
+        Cmd: ['mkdir', '-p', dirPath],
+        AttachStdout: true,
+        AttachStderr: true
+      });
+
+      await exec.start({ hijack: true, stdin: false });
+
+      return {
+        success: true,
+        message: 'Directory created successfully'
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Failed to create directory: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Uploads a file to the container
+   */
+  async uploadFile(containerName: string, filePath: string, fileBuffer: Buffer): Promise<AgentResponse> {
+    try {
+      const container = this.docker.getContainer(containerName);
+
+      const base64Content = fileBuffer.toString('base64');
+
+      const exec = await container.exec({
+        Cmd: ['sh', '-c', `echo "${base64Content}" | base64 -d > ${filePath}`],
+        AttachStdout: true,
+        AttachStderr: true
+      });
+
+      await exec.start({ hijack: true, stdin: false });
+
+      return {
+        success: true,
+        message: 'File uploaded successfully'
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Failed to upload file: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Downloads a file from the container
+   */
+  async downloadFile(containerName: string, filePath: string): Promise<AgentResponse> {
+    try {
+      const container = this.docker.getContainer(containerName);
+
+      const exec = await container.exec({
+        Cmd: ['cat', filePath],
+        AttachStdout: true,
+        AttachStderr: true
+      });
+
+      const stream = await exec.start({ hijack: true, stdin: false });
+
+      return new Promise((resolve, reject) => {
+        const chunks: Buffer[] = [];
+        stream.on('data', (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
+
+        stream.on('end', () => {
+          const buffer = Buffer.concat(chunks);
+          resolve({
+            success: true,
+            data: {
+              content: buffer.toString('base64')
+            }
+          });
+        });
+
+        stream.on('error', reject);
+      });
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Failed to download file: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Gets file information
+   */
+  async getFileInfo(containerName: string, filePath: string): Promise<AgentResponse> {
+    try {
+      const container = this.docker.getContainer(containerName);
+
+      const exec = await container.exec({
+        Cmd: ['stat', '-c', '%s %Y %A', filePath],
+        AttachStdout: true,
+        AttachStderr: true
+      });
+
+      const stream = await exec.start({ hijack: true, stdin: false });
+
+      return new Promise((resolve, reject) => {
+        let output = '';
+        stream.on('data', (chunk: Buffer) => {
+          output += chunk.toString();
+        });
+
+        stream.on('end', () => {
+          const [size, mtime, permissions] = output.trim().split(' ');
+          resolve({
+            success: true,
+            data: {
+              size: parseInt(size),
+              modified: new Date(parseInt(mtime) * 1000),
+              permissions
+            }
+          });
+        });
+
+        stream.on('error', reject);
+      });
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Failed to get file info: ${error.message}`
+      };
+    }
+  }
 }
