@@ -1,0 +1,387 @@
+import { PrismaClient, MinecraftServer, ServerStatus, MinecraftVersionType } from '@prisma/client';
+import { AppError } from '../middleware/error.middleware';
+import { HostService } from './host.service';
+import { AgentService } from './agent.service';
+import { WebSocketService } from './websocket.service';
+import { WebSocketEvent } from '@minecraft-hosting/shared';
+
+const prisma = new PrismaClient();
+
+export interface CreateServerData {
+  name: string;
+  userId: string;
+  minecraftVersion: string;
+  versionType: MinecraftVersionType;
+  allocatedRam: number;
+  allocatedCpu: number;
+  maxPlayers: number;
+  difficulty: string;
+  gameMode: string;
+  modIds?: string[];
+}
+
+export class ServerService {
+  private hostService = new HostService();
+  private agentService = new AgentService();
+
+  /**
+   * Erstellt einen neuen Minecraft Server
+   * Wählt automatisch den besten verfügbaren Host basierend auf Ressourcen
+   */
+  async createServer(data: CreateServerData): Promise<MinecraftServer> {
+    // Prüfe, ob User bereits maximal Anzahl Server hat
+    const userServers = await prisma.minecraftServer.count({
+      where: { userId: data.userId }
+    });
+
+    const user = await prisma.user.findUnique({
+      where: { id: data.userId }
+    });
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    if (userServers >= user.maxServers) {
+      throw new AppError(`Maximum server limit reached (${user.maxServers})`, 400);
+    }
+
+    // Finde verfügbaren Host mit genug Ressourcen
+    const host = await this.hostService.findAvailableHost(data.allocatedRam, data.allocatedCpu);
+
+    if (!host) {
+      throw new AppError('No available host with sufficient resources', 503);
+    }
+
+    // Finde freien Port
+    const port = await this.findAvailablePort(host.id);
+
+    // Erstelle Server in DB
+    const server = await prisma.minecraftServer.create({
+      data: {
+        name: data.name,
+        userId: data.userId,
+        hostId: host.id,
+        version: data.minecraftVersion,
+        minecraftVersion: data.versionType,
+        port,
+        allocatedRam: data.allocatedRam,
+        allocatedCpu: data.allocatedCpu,
+        maxPlayers: data.maxPlayers,
+        difficulty: data.difficulty as any,
+        gameMode: data.gameMode as any,
+        containerName: `mc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        status: ServerStatus.CREATING
+      },
+      include: {
+        host: true,
+        user: true
+      }
+    });
+
+    // Update Host Ressourcen
+    await this.hostService.updateResourceUsage(host.id, data.allocatedRam, data.allocatedCpu, 1);
+
+    // Sende Befehl an Agent zum Erstellen des Containers
+    try {
+      await this.agentService.createServer(host, server);
+
+      // Update Server Status
+      await prisma.minecraftServer.update({
+        where: { id: server.id },
+        data: { status: ServerStatus.STOPPED }
+      });
+
+      // WebSocket Benachrichtigung
+      WebSocketService.getInstance().broadcast({
+        event: WebSocketEvent.SERVER_STATUS_CHANGED,
+        data: { serverId: server.id, status: ServerStatus.STOPPED },
+        timestamp: new Date()
+      });
+    } catch (error) {
+      await prisma.minecraftServer.update({
+        where: { id: server.id },
+        data: { status: ServerStatus.ERROR }
+      });
+      throw error;
+    }
+
+    return server;
+  }
+
+  /**
+   * Startet einen Minecraft Server
+   */
+  async startServer(serverId: string, userId: string): Promise<MinecraftServer> {
+    const server = await this.getServerWithAuth(serverId, userId);
+
+    if (server.status === ServerStatus.RUNNING) {
+      throw new AppError('Server is already running', 400);
+    }
+
+    await prisma.minecraftServer.update({
+      where: { id: serverId },
+      data: { status: ServerStatus.STARTING }
+    });
+
+    try {
+      await this.agentService.startServer(server.host, server);
+
+      const updatedServer = await prisma.minecraftServer.update({
+        where: { id: serverId },
+        data: {
+          status: ServerStatus.RUNNING,
+          lastStarted: new Date()
+        },
+        include: { host: true, user: true }
+      });
+
+      WebSocketService.getInstance().broadcast({
+        event: WebSocketEvent.SERVER_STATUS_CHANGED,
+        data: { serverId, status: ServerStatus.RUNNING },
+        timestamp: new Date()
+      });
+
+      return updatedServer;
+    } catch (error) {
+      await prisma.minecraftServer.update({
+        where: { id: serverId },
+        data: { status: ServerStatus.ERROR }
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Stoppt einen Minecraft Server
+   */
+  async stopServer(serverId: string, userId: string): Promise<MinecraftServer> {
+    const server = await this.getServerWithAuth(serverId, userId);
+
+    if (server.status === ServerStatus.STOPPED) {
+      throw new AppError('Server is already stopped', 400);
+    }
+
+    await prisma.minecraftServer.update({
+      where: { id: serverId },
+      data: { status: ServerStatus.STOPPING }
+    });
+
+    try {
+      await this.agentService.stopServer(server.host, server);
+
+      const updatedServer = await prisma.minecraftServer.update({
+        where: { id: serverId },
+        data: { status: ServerStatus.STOPPED },
+        include: { host: true, user: true }
+      });
+
+      WebSocketService.getInstance().broadcast({
+        event: WebSocketEvent.SERVER_STATUS_CHANGED,
+        data: { serverId, status: ServerStatus.STOPPED },
+        timestamp: new Date()
+      });
+
+      return updatedServer;
+    } catch (error) {
+      await prisma.minecraftServer.update({
+        where: { id: serverId },
+        data: { status: ServerStatus.ERROR }
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * WICHTIG: Neustart mit minimaler Downtime
+   * Nutzt Rolling-Restart-Strategie mit Statusübergängen
+   */
+  async restartServer(serverId: string, userId: string): Promise<MinecraftServer> {
+    const server = await this.getServerWithAuth(serverId, userId);
+
+    await prisma.minecraftServer.update({
+      where: { id: serverId },
+      data: { status: ServerStatus.RESTARTING }
+    });
+
+    try {
+      // Graceful Restart: Speichere Welt, stoppe sanft, starte neu
+      await this.agentService.restartServer(server.host, server);
+
+      const updatedServer = await prisma.minecraftServer.update({
+        where: { id: serverId },
+        data: {
+          status: ServerStatus.RUNNING,
+          lastStarted: new Date()
+        },
+        include: { host: true, user: true }
+      });
+
+      WebSocketService.getInstance().broadcast({
+        event: WebSocketEvent.SERVER_STATUS_CHANGED,
+        data: { serverId, status: ServerStatus.RUNNING },
+        timestamp: new Date()
+      });
+
+      return updatedServer;
+    } catch (error) {
+      await prisma.minecraftServer.update({
+        where: { id: serverId },
+        data: { status: ServerStatus.ERROR }
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * KRITISCHE FUNKTION: Dynamische Ressourcenanpassung mit minimaler Downtime
+   *
+   * Strategie:
+   * 1. Speichere aktuelle Welt
+   * 2. Update Container-Ressourcen (RAM/CPU) ohne kompletten Neustart
+   * 3. Nutze Docker's Live-Update-Capabilities
+   * 4. Bei Bedarf kurzer Rolling-Restart (< 5 Sekunden)
+   */
+  async updateResources(
+    serverId: string,
+    userId: string,
+    allocatedRam?: number,
+    allocatedCpu?: number
+  ): Promise<MinecraftServer> {
+    const server = await this.getServerWithAuth(serverId, userId);
+    const oldRam = server.allocatedRam;
+    const oldCpu = server.allocatedCpu;
+
+    const newRam = allocatedRam || oldRam;
+    const newCpu = allocatedCpu || oldCpu;
+
+    // Update Datenbank
+    const updatedServer = await prisma.minecraftServer.update({
+      where: { id: serverId },
+      data: {
+        allocatedRam: newRam,
+        allocatedCpu: newCpu,
+        status: ServerStatus.UPDATING
+      },
+      include: { host: true, user: true }
+    });
+
+    try {
+      // Live-Update der Container-Ressourcen (ohne Neustart wenn möglich)
+      await this.agentService.updateResources(server.host, server, newRam, newCpu);
+
+      // Update Host Ressourcen
+      const ramDiff = newRam - oldRam;
+      const cpuDiff = newCpu - oldCpu;
+      await this.hostService.updateResourceUsage(server.hostId, ramDiff, cpuDiff, 0);
+
+      // Status zurück setzen
+      await prisma.minecraftServer.update({
+        where: { id: serverId },
+        data: { status: server.status === ServerStatus.RUNNING ? ServerStatus.RUNNING : ServerStatus.STOPPED }
+      });
+
+      return updatedServer;
+    } catch (error) {
+      // Rollback bei Fehler
+      await prisma.minecraftServer.update({
+        where: { id: serverId },
+        data: {
+          allocatedRam: oldRam,
+          allocatedCpu: oldCpu,
+          status: ServerStatus.ERROR
+        }
+      });
+      throw error;
+    }
+  }
+
+  async deleteServer(serverId: string, userId: string): Promise<void> {
+    const server = await this.getServerWithAuth(serverId, userId);
+
+    // Stoppe Server falls er läuft
+    if (server.status === ServerStatus.RUNNING) {
+      await this.agentService.stopServer(server.host, server);
+    }
+
+    // Lösche Container
+    await this.agentService.deleteServer(server.host, server);
+
+    // Update Host Ressourcen
+    await this.hostService.updateResourceUsage(
+      server.hostId,
+      -server.allocatedRam,
+      -server.allocatedCpu,
+      -1
+    );
+
+    // Lösche aus DB
+    await prisma.minecraftServer.delete({
+      where: { id: serverId }
+    });
+  }
+
+  async getUserServers(userId: string): Promise<MinecraftServer[]> {
+    return prisma.minecraftServer.findMany({
+      where: { userId },
+      include: {
+        host: true,
+        stats: true,
+        mods: {
+          include: {
+            mod: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async getServerById(serverId: string, userId: string): Promise<MinecraftServer> {
+    return this.getServerWithAuth(serverId, userId);
+  }
+
+  private async getServerWithAuth(serverId: string, userId: string): Promise<any> {
+    const server = await prisma.minecraftServer.findUnique({
+      where: { id: serverId },
+      include: {
+        host: true,
+        user: true,
+        stats: true,
+        mods: {
+          include: {
+            mod: true
+          }
+        }
+      }
+    });
+
+    if (!server) {
+      throw new AppError('Server not found', 404);
+    }
+
+    if (server.userId !== userId) {
+      throw new AppError('Not authorized to access this server', 403);
+    }
+
+    return server;
+  }
+
+  private async findAvailablePort(hostId: string): Promise<number> {
+    const existingServers = await prisma.minecraftServer.findMany({
+      where: { hostId },
+      select: { port: true }
+    });
+
+    const usedPorts = new Set(existingServers.map(s => s.port));
+
+    // Start bei Port 25565 (Standard Minecraft Port)
+    for (let port = 25565; port < 35565; port++) {
+      if (!usedPorts.has(port)) {
+        return port;
+      }
+    }
+
+    throw new AppError('No available ports on this host', 503);
+  }
+}

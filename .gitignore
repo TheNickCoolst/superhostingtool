@@ -1,0 +1,33 @@
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.local
+.DS_Store
+coverage/
+.vscode/
+.idea/
+
+# Backend specific
+backend/uploads/
+backend/backups/
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+
+# Minecraft server files
+*.jar
+server-instances/
+world/
+world_nether/
+world_the_end/
+logs/
+crash-reports/
+
+# Secrets
+*.pem
+*.key
+secrets/

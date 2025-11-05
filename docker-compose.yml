@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mc-hosting-db
+    environment:
+      POSTGRES_USER: minecraft
+      POSTGRES_PASSWORD: minecraft_secure_password
+      POSTGRES_DB: minecraft_hosting
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - mc-hosting-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U minecraft"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Service
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: mc-hosting-backend
+    environment:
+      DATABASE_URL: postgresql://minecraft:minecraft_secure_password@postgres:5432/minecraft_hosting
+      PORT: 3000
+      WS_PORT: 3001
+      NODE_ENV: production
+      JWT_SECRET: change-this-in-production
+      JWT_EXPIRES_IN: 7d
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mc-hosting-network
+    volumes:
+      - backend-uploads:/app/uploads
+      - backend-backups:/app/backups
+    restart: unless-stopped
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mc-hosting-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - mc-hosting-network
+    restart: unless-stopped
+
+  # Host Agent (würde normalerweise auf separaten Hosts laufen)
+  agent:
+    build:
+      context: .
+      dockerfile: agent/Dockerfile
+    container_name: mc-hosting-agent
+    environment:
+      AGENT_PORT: 4000
+      AGENT_API_KEY: secure-agent-api-key
+      BACKEND_URL: http://backend:3000
+      HOST_ID: default-host-id
+      NODE_ENV: production
+    ports:
+      - "4000:4000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker-in-Docker
+      - minecraft-servers:/opt/minecraft-servers
+    depends_on:
+      - backend
+    networks:
+      - mc-hosting-network
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  backend-uploads:
+  backend-backups:
+  minecraft-servers:
+
+networks:
+  mc-hosting-network:
+    driver: bridge

@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-config
+  namespace: minecraft-hosting
+data:
+  AGENT_PORT: "4000"
+  BACKEND_URL: "http://backend:3000"
+  NODE_ENV: "production"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: agent-secret
+  namespace: minecraft-hosting
+type: Opaque
+stringData:
+  AGENT_API_KEY: secure-agent-api-key-change-in-production
+---
+# DaemonSet: Läuft auf jedem Node (Host)
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: host-agent
+  namespace: minecraft-hosting
+spec:
+  selector:
+    matchLabels:
+      app: host-agent
+  template:
+    metadata:
+      labels:
+        app: host-agent
+    spec:
+      # Wichtig: Zugriff auf Docker Socket des Hosts
+      hostNetwork: true
+      containers:
+      - name: agent
+        image: your-registry/minecraft-hosting-agent:latest
+        ports:
+        - containerPort: 4000
+          hostPort: 4000
+        envFrom:
+        - configMapRef:
+            name: agent-config
+        - secretRef:
+            name: agent-secret
+        volumeMounts:
+        - name: docker-socket
+          mountPath: /var/run/docker.sock
+        - name: minecraft-servers
+          mountPath: /opt/minecraft-servers
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket
+      - name: minecraft-servers
+        hostPath:
+          path: /opt/minecraft-servers
+          type: DirectoryOrCreate
