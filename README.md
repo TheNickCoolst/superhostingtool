@@ -51,22 +51,13 @@ Für erweiterte Optionen (Docker, minimale Installation, etc.):
 
 ---
 
-### 🌐 Option 3: Web-basierter Setup Wizard
-
-Öffne einfach `setup-wizard.html` in deinem Browser für eine geführte Installation mit grafischer Oberfläche!
+### 📱 Quick Commands
 
 ```bash
-# Öffne die Datei in deinem Browser:
-open setup-wizard.html        # macOS
-xdg-open setup-wizard.html    # Linux
-```
+# Entwicklung starten
+npm run dev
 
----
-
-### 📱 Quick Commands (nachdem installiert)
-
-```bash
-# Starten
+# Mit Docker
 docker-compose up -d
 
 # Stoppen
@@ -74,14 +65,10 @@ docker-compose down
 
 # Logs ansehen
 docker-compose logs -f
-
-# Status prüfen
-docker-compose ps
 ```
 
-**Frontend:** http://localhost
+**Frontend:** http://localhost:5173
 **Backend API:** http://localhost:3000
-**Dokumentation:** [QUICKSTART.md](./QUICKSTART.md)
 
 ---
 

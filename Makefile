@@ -1,7 +1,7 @@
 # Minecraft Hosting Platform - Makefile
 # Vereinfacht häufig verwendete Befehle
 
-.PHONY: help install quickstart check-system start stop logs health clean test build docker-up docker-down wizard
+.PHONY: help install quickstart start stop logs health clean test build docker-up docker-down
 
 # Farben für Ausgabe
 BLUE := \033[0;34m
@@ -19,8 +19,7 @@ help: ## Zeigt diese Hilfe an
 	@echo ""
 	@echo "$(BLUE)$(BOLD)📦 SCHNELLSTART (für neue Benutzer):$(NC)"
 	@echo "  $(GREEN)make quickstart$(NC)      - Super einfache Installation (60 Sekunden!)"
-	@echo "  $(GREEN)make wizard$(NC)          - Web-basierter Setup Wizard"
-	@echo "  $(GREEN)make check-system$(NC)    - System-Voraussetzungen prüfen"
+	@echo "  $(GREEN)make install$(NC)         - Erweiterte Installation mit Optionen"
 	@echo ""
 	@echo "$(BLUE)$(BOLD)⚙️  INSTALLATION:$(NC)"
 	@grep -E '^install.*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
@@ -41,20 +40,7 @@ help: ## Zeigt diese Hilfe an
 	@echo ""
 
 quickstart: ## 🚀 Super einfache One-Line Installation (EMPFOHLEN!)
-	@./quick-start.sh
-
-check-system: ## 🔍 Prüft System-Voraussetzungen
-	@./check-system.sh
-
-wizard: ## 🌐 Öffnet Web-basierten Setup Wizard
-	@echo "$(BLUE)Öffne Setup Wizard...$(NC)"
-	@if command -v xdg-open > /dev/null; then \
-		xdg-open setup-wizard.html; \
-	elif command -v open > /dev/null; then \
-		open setup-wizard.html; \
-	else \
-		echo "$(YELLOW)Bitte öffne 'setup-wizard.html' manuell in deinem Browser$(NC)"; \
-	fi
+	@./quick-install.sh
 
 install: ## Interaktive Installation
 	@./install.sh
