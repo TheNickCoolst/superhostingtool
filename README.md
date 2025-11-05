@@ -2,8 +2,37 @@
 
 Eine skalierbare, professionelle Minecraft Hosting Plattform mit Multi-Host-Architektur, dynamischer Ressourcenverwaltung und minimaler Downtime.
 
+## 🚀 Quick Start
+
+**One-Click Installation:**
+
+```bash
+./install.sh
+```
+
+Das war's! Das Installationsskript führt dich durch den kompletten Setup-Prozess.
+
+**Schnelle Optionen:**
+- `./install.sh --docker` - Docker Compose Installation (empfohlen)
+- `./install.sh --local` - Lokale Entwicklungsumgebung
+- `./install.sh --check` - System-Voraussetzungen prüfen
+
+**Oder mit Make:**
+```bash
+make install        # Interaktive Installation
+make install-docker # Docker Installation
+make install-local  # Lokale Installation
+make dev           # Entwicklung starten
+make help          # Alle verfügbaren Befehle
+```
+
+📖 **Mehr Details:** Siehe [QUICKSTART.md](./QUICKSTART.md) für eine vollständige Anleitung.
+
+---
+
 ## Inhaltsverzeichnis
 
+- [Quick Start](#-quick-start)
 - [Features](#features)
 - [Architektur](#architektur)
 - [Technologie-Stack](#technologie-stack)
