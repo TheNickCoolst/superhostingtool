@@ -45,6 +45,16 @@ const envSchema: RequiredEnvVars = {
   ALLOWED_ORIGINS: {
     required: false,
     description: 'Comma-separated list of allowed CORS origins (default: http://localhost:5173)'
+  },
+  RATE_LIMIT_WINDOW_MS: {
+    required: false,
+    description: 'Rate limit window in milliseconds (default: 900000 / 15 minutes)',
+    validator: (val) => !isNaN(parseInt(val)) && parseInt(val) > 0
+  },
+  RATE_LIMIT_MAX_REQUESTS: {
+    required: false,
+    description: 'Maximum number of requests per window (default: 100)',
+    validator: (val) => !isNaN(parseInt(val)) && parseInt(val) > 0
   }
 };
 

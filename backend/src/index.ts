@@ -19,13 +19,14 @@ import notificationRoutes from './routes/notification.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import fileRoutes from './routes/file.routes';
 
-import { errorHandler } from './middleware/error.middleware';
+import { errorHandler, AppError } from './middleware/error.middleware';
 import { rateLimiter } from './middleware/rateLimit.middleware';
 import { WebSocketService } from './services/websocket.service';
 import { BackupScheduler } from './services/backup.scheduler';
 import { HostHeartbeatService } from './services/host-heartbeat.service';
 import ScheduledTaskService from './services/scheduled-task.service';
-import { validateEnvironment } from './lib/env-validation';
+import { validateEnvironment, getEnv, getEnvNumber } from './lib/env-validation';
+import { logger } from './lib/logger';
 
 // Load environment variables
 dotenv.config();
@@ -34,14 +35,14 @@ dotenv.config();
 validateEnvironment();
 
 const app: Application = express();
-const PORT = process.env.PORT || 3000;
-const WS_PORT = process.env.WS_PORT || 3001;
+const PORT = getEnvNumber('PORT', 3000);
+const WS_PORT = getEnvNumber('WS_PORT', 3001);
 
 // ==================== Middleware ====================
 app.use(helmet());
 
 // Configure CORS with environment variables
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'];
+const allowedOrigins = getEnv('ALLOWED_ORIGINS', 'http://localhost:5173').split(',').map(origin => origin.trim());
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -50,7 +51,8 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      logger.warn('CORS blocked request', { origin });
+      callback(new AppError(`Origin ${origin} is not allowed by CORS policy`, 403));
     }
   },
   credentials: true,
@@ -88,37 +90,36 @@ app.use(errorHandler);
 const httpServer = createServer(app);
 
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Backend server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
+  logger.info('Backend server started', { port: PORT, environment: getEnv('NODE_ENV') });
 });
 
 // ==================== WebSocket Server ====================
-const wss = new WebSocketServer({ port: parseInt(WS_PORT as string) });
+const wss = new WebSocketServer({ port: WS_PORT });
 const wsService = WebSocketService.getInstance(wss);
 
-console.log(`🔌 WebSocket server running on port ${WS_PORT}`);
+logger.info('WebSocket server started', { port: WS_PORT });
 
 // ==================== Background Services ====================
 const backupScheduler = new BackupScheduler();
 backupScheduler.start();
-console.log('📦 Backup scheduler started');
+logger.info('Backup scheduler started');
 
 const heartbeatService = new HostHeartbeatService();
 heartbeatService.start();
-console.log('💓 Host heartbeat service started');
+logger.info('Host heartbeat service started');
 
 // Initialize scheduled tasks
 ScheduledTaskService.initializeTasks().then(() => {
-  console.log('⏰ Scheduled tasks initialized');
+  logger.info('Scheduled tasks initialized');
 }).catch((error) => {
-  console.error('Failed to initialize scheduled tasks:', error);
+  logger.error('Failed to initialize scheduled tasks', error);
 });
 
 // ==================== Graceful Shutdown ====================
 process.on('SIGTERM', async () => {
-  console.log('SIGTERM signal received: closing HTTP server');
+  logger.info('SIGTERM signal received, initiating graceful shutdown');
   httpServer.close(() => {
-    console.log('HTTP server closed');
+    logger.info('HTTP server closed');
   });
   backupScheduler.stop();
   heartbeatService.stop();

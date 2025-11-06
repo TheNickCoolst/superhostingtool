@@ -246,12 +246,42 @@ export enum AgentCommandType {
   INSTALL_MOD = 'INSTALL_MOD',
   REMOVE_MOD = 'REMOVE_MOD',
   UPDATE_SERVER = 'UPDATE_SERVER',
-  GET_STATS = 'GET_STATS'
+  GET_STATS = 'GET_STATS',
+  LIST_FILES = 'LIST_FILES',
+  READ_FILE = 'READ_FILE',
+  WRITE_FILE = 'WRITE_FILE',
+  DELETE_FILE = 'DELETE_FILE',
+  CREATE_DIRECTORY = 'CREATE_DIRECTORY',
+  UPLOAD_FILE = 'UPLOAD_FILE',
+  DOWNLOAD_FILE = 'DOWNLOAD_FILE',
+  GET_FILE_INFO = 'GET_FILE_INFO'
 }
 
-export interface AgentResponse {
+export interface AgentResponse<T = any> {
   success: boolean;
   message?: string;
-  data?: any;
+  data?: T;
   error?: string;
+}
+
+// ==================== API Response Types ====================
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+export interface ApiErrorResponse {
+  error: string;
+  statusCode?: number;
+  message?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
