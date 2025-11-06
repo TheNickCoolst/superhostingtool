@@ -18,7 +18,12 @@
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["./shared/src/*"]
-    }
+    },
+    /* Additional Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true
   },
   "exclude": ["node_modules", "dist", "build"]
 }

@@ -5,6 +5,8 @@ import { BackupService } from './services/backup.service';
 import { MonitoringService } from './services/monitoring.service';
 import { HeartbeatService } from './services/heartbeat.service';
 import { AgentCommandType, AgentResponse } from '@minecraft-hosting/shared';
+import { authenticate } from './middleware/auth.middleware';
+import { logger } from './lib/logger';
 
 dotenv.config();
 
@@ -20,24 +22,6 @@ const heartbeatService = new HeartbeatService();
 // Middleware
 app.use(express.json());
 
-// Authentifizierungs-Middleware
-const authenticate = (req: Request, res: Response, next: Function) => {
-  const authHeader = req.headers.authorization;
-  const expectedToken = process.env.AGENT_API_KEY;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const token = authHeader.substring(7);
-
-  if (token !== expectedToken) {
-    return res.status(401).json({ error: 'Invalid API key' });
-  }
-
-  next();
-};
-
 // Health Check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
@@ -51,7 +35,7 @@ app.post('/api/command', authenticate, async (req: Request, res: Response) => {
     const { type, payload } = req.body;
     let result: AgentResponse;
 
-    console.log(`Received command: ${type}`, payload);
+    logger.debug('Received command', { type, payload });
 
     switch (type as AgentCommandType) {
       case AgentCommandType.CREATE_SERVER:
@@ -108,27 +92,27 @@ app.post('/api/command', authenticate, async (req: Request, res: Response) => {
         break;
 
       // File Management Operations
-      case 'LIST_FILES' as any:
+      case AgentCommandType.LIST_FILES:
         result = await dockerService.listFiles(payload.containerName, payload.path);
         break;
 
-      case 'READ_FILE' as any:
+      case AgentCommandType.READ_FILE:
         result = await dockerService.readFile(payload.containerName, payload.filePath);
         break;
 
-      case 'WRITE_FILE' as any:
+      case AgentCommandType.WRITE_FILE:
         result = await dockerService.writeFile(payload.containerName, payload.filePath, payload.content);
         break;
 
-      case 'DELETE_FILE' as any:
+      case AgentCommandType.DELETE_FILE:
         result = await dockerService.deleteFile(payload.containerName, payload.filePath);
         break;
 
-      case 'CREATE_DIRECTORY' as any:
+      case AgentCommandType.CREATE_DIRECTORY:
         result = await dockerService.createDirectory(payload.containerName, payload.dirPath);
         break;
 
-      case 'UPLOAD_FILE' as any:
+      case AgentCommandType.UPLOAD_FILE:
         result = await dockerService.uploadFile(
           payload.containerName,
           payload.filePath,
@@ -136,11 +120,11 @@ app.post('/api/command', authenticate, async (req: Request, res: Response) => {
         );
         break;
 
-      case 'DOWNLOAD_FILE' as any:
+      case AgentCommandType.DOWNLOAD_FILE:
         result = await dockerService.downloadFile(payload.containerName, payload.filePath);
         break;
 
-      case 'GET_FILE_INFO' as any:
+      case AgentCommandType.GET_FILE_INFO:
         result = await dockerService.getFileInfo(payload.containerName, payload.filePath);
         break;
 
@@ -153,7 +137,7 @@ app.post('/api/command', authenticate, async (req: Request, res: Response) => {
 
     res.json(result);
   } catch (error: any) {
-    console.error('Command execution failed:', error);
+    logger.error('Command execution failed', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -162,17 +146,37 @@ app.post('/api/command', authenticate, async (req: Request, res: Response) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`🤖 Host Agent running on port ${PORT}`);
-  console.log(`📦 Docker service initialized`);
+const server = app.listen(PORT, () => {
+  logger.info('Host Agent started', { port: PORT });
+  logger.info('Docker service initialized');
 
   // Start Heartbeat
   heartbeatService.start();
-  console.log('💓 Heartbeat service started');
+  logger.info('Heartbeat service started');
 
   // Start Monitoring
   monitoringService.start();
-  console.log('📊 Monitoring service started');
+  logger.info('Monitoring service started');
+});
+
+// ==================== Graceful Shutdown ====================
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM signal received, initiating graceful shutdown');
+  server.close(() => {
+    logger.info('HTTP server closed');
+  });
+  heartbeatService.stop();
+  monitoringService.stop();
+});
+
+process.on('SIGINT', async () => {
+  logger.info('SIGINT signal received, initiating graceful shutdown');
+  server.close(() => {
+    logger.info('HTTP server closed');
+  });
+  heartbeatService.stop();
+  monitoringService.stop();
+  process.exit(0);
 });
 
 export default app;
