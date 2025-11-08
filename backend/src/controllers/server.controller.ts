@@ -146,10 +146,14 @@ export class ServerController {
     try {
       const { id } = req.params;
       const { command } = req.body;
-      // TODO: Implement command execution
+      const userId = req.user!.id;
+
+      const result = await this.serverService.executeCommand(id, userId, command);
+
       res.json({
-        message: 'Command executed',
-        command
+        success: true,
+        data: result,
+        message: 'Command executed successfully'
       });
     } catch (error) {
       next(error);

@@ -99,6 +99,10 @@ model MinecraftServer {
   @@index([userId])
   @@index([hostId])
   @@index([status])
+  @@index([userId, status])
+  @@index([hostId, status])
+  @@index([createdAt])
+  @@index([lastStarted])
 }
 
 enum ServerStatus {
@@ -193,6 +197,9 @@ model Backup {
 
   @@index([serverId])
   @@index([status])
+  @@index([serverId, createdAt])
+  @@index([serverId, status])
+  @@index([createdAt])
 }
 
 enum BackupType {
@@ -324,6 +331,8 @@ model ScheduledTask {
   @@index([serverId])
   @@index([enabled])
   @@index([nextRun])
+  @@index([serverId, enabled])
+  @@index([enabled, nextRun])
 }
 
 enum TaskType {
@@ -348,6 +357,8 @@ model NotificationConfig {
 
   @@index([userId])
   @@index([serverId])
+  @@index([userId, enabled])
+  @@index([serverId, type])
 }
 
 enum NotificationType {
@@ -385,8 +396,9 @@ model ServerMetrics {
 
   server          MinecraftServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
-  @@index([serverId, timestamp])
-  @@index([timestamp])
+  @@index([serverId, timestamp(sort: Desc)])
+  @@index([timestamp(sort: Desc)])
+  @@index([serverId])
 }
 
 model ConsoleLog {

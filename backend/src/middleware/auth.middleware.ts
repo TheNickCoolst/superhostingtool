@@ -55,3 +55,55 @@ export const authorize = (...roles: UserRole[]) => {
     next();
   };
 };
+
+/**
+ * Authenticate requests from Host Agents
+ * Validates the X-Agent-API-Key header against the host's API key
+ */
+export const authenticateAgent = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const apiKey = req.headers['x-agent-api-key'] as string;
+
+    if (!apiKey) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'MISSING_API_KEY',
+          message: 'X-Agent-API-Key header is required'
+        }
+      });
+    }
+
+    // Note: In production, you should validate the API key against the database
+    // For now, we check against a simple environment variable
+    const validApiKey = process.env.AGENT_API_KEY;
+
+    if (!validApiKey) {
+      throw new Error('AGENT_API_KEY is not configured');
+    }
+
+    if (apiKey !== validApiKey) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'INVALID_API_KEY',
+          message: 'Invalid API key'
+        }
+      });
+    }
+
+    next();
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'AUTH_ERROR',
+        message: 'Authentication error'
+      }
+    });
+  }
+};

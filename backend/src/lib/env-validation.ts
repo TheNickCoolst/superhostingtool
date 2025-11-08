@@ -35,8 +35,11 @@ const envSchema: RequiredEnvVars = {
   },
   JWT_SECRET: {
     required: true,
-    description: 'Secret key for JWT token signing (min 32 characters)',
-    validator: (val) => val.length >= 32
+    description: 'Secret key for JWT token signing (min 64 characters for production)',
+    validator: (val) => {
+      const minLength = process.env.NODE_ENV === 'production' ? 64 : 32;
+      return val.length >= minLength;
+    }
   },
   JWT_EXPIRES_IN: {
     required: false,

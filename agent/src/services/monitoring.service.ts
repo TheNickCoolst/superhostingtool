@@ -1,6 +1,7 @@
 import { DockerService } from './docker.service';
 import Docker from 'dockerode';
 import { AgentResponse } from '@minecraft-hosting/shared';
+import axios from 'axios';
 
 /**
  * Monitoring Service
@@ -9,9 +10,13 @@ import { AgentResponse } from '@minecraft-hosting/shared';
 export class MonitoringService {
   private docker: Docker;
   private monitoringInterval: NodeJS.Timeout | null = null;
+  private backendUrl: string;
+  private apiKey: string;
 
   constructor(private dockerService: DockerService) {
     this.docker = new Docker({ socketPath: '/var/run/docker.sock' });
+    this.backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+    this.apiKey = process.env.AGENT_API_KEY || '';
   }
 
   /**
@@ -49,7 +54,13 @@ export class MonitoringService {
 
         console.log(`[${containerInfo.Names[0]}] CPU: ${cpuUsage.toFixed(2)}%, RAM: ${memoryUsage.toFixed(2)} MB`);
 
-        // TODO: Sende Stats an Backend via WebSocket oder API
+        // Sende Stats an Backend
+        await this.sendStatsToBackend(containerInfo.Names[0], {
+          cpuUsage,
+          ramUsage: memoryUsage,
+          containerName: containerInfo.Names[0],
+          status: containerInfo.State
+        });
       }
     } catch (error) {
       console.error('Failed to collect stats:', error);
@@ -120,5 +131,31 @@ export class MonitoringService {
     const startedAt = new Date(info.State.StartedAt);
     const now = new Date();
     return Math.floor((now.getTime() - startedAt.getTime()) / 1000);
+  }
+
+  /**
+   * Sendet Stats an Backend
+   */
+  private async sendStatsToBackend(containerName: string, stats: any): Promise<void> {
+    try {
+      await axios.post(
+        `${this.backendUrl}/api/stats/update`,
+        {
+          containerName,
+          stats
+        },
+        {
+          headers: {
+            'X-Agent-API-Key': this.apiKey
+          },
+          timeout: 5000 // 5 Sekunden Timeout
+        }
+      );
+    } catch (error: any) {
+      // Logge Fehler, aber stoppe nicht das Monitoring
+      if (error.code !== 'ECONNREFUSED') {
+        console.error('Failed to send stats to backend:', error.message);
+      }
+    }
   }
 }

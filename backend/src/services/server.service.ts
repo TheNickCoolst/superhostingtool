@@ -341,6 +341,41 @@ export class ServerService {
     return this.getServerWithAuth(serverId, userId);
   }
 
+  /**
+   * Execute a command on the Minecraft server
+   */
+  async executeCommand(serverId: string, userId: string, command: string): Promise<{ success: boolean; output?: string }> {
+    const server = await this.getServerWithAuth(serverId, userId);
+
+    // Check if server is running
+    if (server.status !== ServerStatus.RUNNING) {
+      throw new AppError(
+        `Cannot execute command. Server must be running. Current status: ${server.status}`,
+        400
+      );
+    }
+
+    // Validate command (basic security check)
+    if (!command || command.trim().length === 0) {
+      throw new AppError('Command cannot be empty', 400);
+    }
+
+    // Execute command via agent
+    const result = await this.agentService.executeCommand(server.host, server, command);
+
+    if (!result.success) {
+      throw new AppError(
+        result.error || 'Failed to execute command',
+        500
+      );
+    }
+
+    return {
+      success: true,
+      output: result.data?.output || 'Command executed successfully'
+    };
+  }
+
   private async getServerWithAuth(serverId: string, userId: string): Promise<any> {
     const server = await prisma.minecraftServer.findUnique({
       where: { id: serverId },

@@ -18,6 +18,7 @@ import scheduledTaskRoutes from './routes/scheduled-task.routes';
 import notificationRoutes from './routes/notification.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import fileRoutes from './routes/file.routes';
+import statsRoutes from './routes/stats.routes';
 
 import { errorHandler, AppError } from './middleware/error.middleware';
 import { rateLimiter } from './middleware/rateLimit.middleware';
@@ -43,21 +44,32 @@ app.use(helmet());
 
 // Configure CORS with environment variables
 const allowedOrigins = getEnv('ALLOWED_ORIGINS', 'http://localhost:5173').split(',').map(origin => origin.trim());
+const isDevelopment = getEnv('NODE_ENV') === 'development';
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    // In development, allow requests with no origin (like Postman, curl)
+    // In production, be strict about origins
+    if (!origin && isDevelopment) {
+      return callback(null, true);
+    }
 
-    if (allowedOrigins.includes(origin)) {
+    if (!origin && !isDevelopment) {
+      logger.warn('CORS blocked request with no origin in production');
+      return callback(new AppError('Origin is required in production', 403));
+    }
+
+    if (allowedOrigins.includes(origin!)) {
       callback(null, true);
     } else {
-      logger.warn('CORS blocked request', { origin });
+      logger.warn('CORS blocked request', { origin, allowedOrigins });
       callback(new AppError(`Origin ${origin} is not allowed by CORS policy`, 403));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400 // 24 hours
 }));
 
 app.use(compression());
@@ -67,7 +79,16 @@ app.use(rateLimiter);
 
 // ==================== Routes ====================
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
+  res.json({
+    success: true,
+    data: {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: getEnv('NODE_ENV'),
+      version: '1.0.0'
+    }
+  });
 });
 
 app.use('/api/auth', authRoutes);
@@ -82,6 +103,7 @@ app.use('/api/tasks', scheduledTaskRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/stats', statsRoutes);
 
 // ==================== Error Handling ====================
 app.use(errorHandler);
