@@ -2,6 +2,7 @@ import { Server as WebSocketServer, WebSocket } from 'ws';
 import { WebSocketMessage } from '@minecraft-hosting/shared';
 import jwt from 'jsonwebtoken';
 import { IncomingMessage } from 'http';
+import { logger } from '../lib/logger';
 
 /**
  * WebSocket Service für Echtzeit-Updates
@@ -31,7 +32,7 @@ export class WebSocketService {
       const token = this.extractToken(req);
 
       if (!token) {
-        console.log('WebSocket connection rejected: No token provided');
+        logger.warn('WebSocket connection rejected: No token provided');
         ws.close(1008, 'Authentication required');
         return;
       }
@@ -39,7 +40,7 @@ export class WebSocketService {
       // Token verifizieren
       const user = this.verifyToken(token);
       if (!user) {
-        console.log('WebSocket connection rejected: Invalid token');
+        logger.warn('WebSocket connection rejected: Invalid token');
         ws.close(1008, 'Invalid authentication token');
         return;
       }
@@ -48,25 +49,25 @@ export class WebSocketService {
       this.clients.set(clientId, ws);
       this.clientUsers.set(clientId, user);
 
-      console.log(`WebSocket client connected: ${clientId} (User: ${user.email})`);
+      logger.info('WebSocket client connected', { clientId, userEmail: user.email });
 
       ws.on('message', (message: string) => {
         try {
           const data = JSON.parse(message.toString());
           this.handleMessage(clientId, data);
         } catch (error) {
-          console.error('Invalid WebSocket message:', error);
+          logger.error('Invalid WebSocket message', error, { clientId });
         }
       });
 
       ws.on('close', () => {
         this.clients.delete(clientId);
         this.clientUsers.delete(clientId);
-        console.log(`WebSocket client disconnected: ${clientId}`);
+        logger.info('WebSocket client disconnected', { clientId });
       });
 
       ws.on('error', (error) => {
-        console.error(`WebSocket error for client ${clientId}:`, error);
+        logger.error('WebSocket error', error, { clientId });
         this.clients.delete(clientId);
         this.clientUsers.delete(clientId);
       });
@@ -122,14 +123,14 @@ export class WebSocketService {
         email: decoded.email
       };
     } catch (error) {
-      console.error('Token verification failed:', error);
+      logger.error('Token verification failed', error);
       return null;
     }
   }
 
   private handleMessage(clientId: string, data: any) {
     // Implementiere Subscription-Logik falls benötigt
-    console.log(`Message from ${clientId}:`, data);
+    logger.debug('Message from client', { clientId, data });
   }
 
   /**
