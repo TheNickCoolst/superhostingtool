@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticate, authorizeServerAccess } from '../middleware/auth.middleware';
 import AnalyticsService from '../services/analytics.service';
 
 const router = Router();
 
 // Get metrics for a server
-router.get('/server/:serverId/metrics', authenticate, async (req, res, next) => {
+router.get('/server/:serverId/metrics', authenticate, authorizeServerAccess, async (req, res, next) => {
   try {
     const hours = parseInt(req.query.hours as string) || 24;
     const metrics = await AnalyticsService.getMetrics(req.params.serverId, hours);
@@ -16,7 +16,7 @@ router.get('/server/:serverId/metrics', authenticate, async (req, res, next) => 
 });
 
 // Get aggregated statistics
-router.get('/server/:serverId/stats', authenticate, async (req, res, next) => {
+router.get('/server/:serverId/stats', authenticate, authorizeServerAccess, async (req, res, next) => {
   try {
     const hours = parseInt(req.query.hours as string) || 24;
     const stats = await AnalyticsService.getAggregatedStats(req.params.serverId, hours);
@@ -27,7 +27,7 @@ router.get('/server/:serverId/stats', authenticate, async (req, res, next) => {
 });
 
 // Get performance trends
-router.get('/server/:serverId/trends', authenticate, async (req, res, next) => {
+router.get('/server/:serverId/trends', authenticate, authorizeServerAccess, async (req, res, next) => {
   try {
     const days = parseInt(req.query.days as string) || 7;
     const trends = await AnalyticsService.getPerformanceTrends(req.params.serverId, days);
@@ -38,7 +38,7 @@ router.get('/server/:serverId/trends', authenticate, async (req, res, next) => {
 });
 
 // Get console logs
-router.get('/server/:serverId/logs', authenticate, async (req, res, next) => {
+router.get('/server/:serverId/logs', authenticate, authorizeServerAccess, async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit as string) || 100;
     const level = req.query.level as string;
@@ -50,7 +50,7 @@ router.get('/server/:serverId/logs', authenticate, async (req, res, next) => {
 });
 
 // Search console logs
-router.get('/server/:serverId/logs/search', authenticate, async (req, res, next) => {
+router.get('/server/:serverId/logs/search', authenticate, authorizeServerAccess, async (req, res, next) => {
   try {
     const query = req.query.q as string;
     const limit = parseInt(req.query.limit as string) || 100;
@@ -67,7 +67,7 @@ router.get('/server/:serverId/logs/search', authenticate, async (req, res, next)
 });
 
 // Get uptime statistics
-router.get('/server/:serverId/uptime', authenticate, async (req, res, next) => {
+router.get('/server/:serverId/uptime', authenticate, authorizeServerAccess, async (req, res, next) => {
   try {
     const days = parseInt(req.query.days as string) || 30;
     const uptime = await AnalyticsService.getUptimeStats(req.params.serverId, days);

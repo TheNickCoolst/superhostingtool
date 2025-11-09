@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Host, MinecraftServer } from '@prisma/client';
 import { AgentCommandType, AgentResponse } from '@minecraft-hosting/shared';
+import { prisma } from '../lib/prisma';
 
 /**
  * Agent Service
@@ -241,8 +242,6 @@ export class AgentService {
    * Helper method to get host by ID
    */
   private async getHost(hostId: string): Promise<Host> {
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
     const host = await prisma.host.findUnique({ where: { id: hostId } });
     if (!host) {
       throw new Error('Host not found');

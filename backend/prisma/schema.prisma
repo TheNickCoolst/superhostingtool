@@ -54,6 +54,7 @@ model Host {
 
   @@index([status])
   @@index([region])
+  @@index([lastHeartbeat])
 }
 
 enum HostStatus {
@@ -193,6 +194,8 @@ model Backup {
 
   @@index([serverId])
   @@index([status])
+  @@index([createdAt])
+  @@index([type, createdAt])
 }
 
 enum BackupType {

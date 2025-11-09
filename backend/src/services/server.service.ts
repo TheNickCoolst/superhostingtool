@@ -368,6 +368,138 @@ export class ServerService {
   }
 
   /**
+   * Clone an existing server with all its configuration
+   */
+  async cloneServer(serverId: string, userId: string, newName: string): Promise<MinecraftServer> {
+    const originalServer = await this.getServerWithAuth(serverId, userId);
+
+    // Check server limit
+    const userServers = await prisma.minecraftServer.count({
+      where: { userId }
+    });
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    if (userServers >= user.maxServers) {
+      throw new AppError(`Maximum server limit reached (${user.maxServers})`, 400);
+    }
+
+    // Find available host with enough resources
+    const host = await this.hostService.findAvailableHost(
+      originalServer.allocatedRam,
+      originalServer.allocatedCpu
+    );
+
+    // Find available port
+    const port = await this.findAvailablePort(host.id);
+
+    // Create new server with cloned configuration
+    const containerName = `mc-${newName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+
+    const clonedServer = await prisma.minecraftServer.create({
+      data: {
+        name: newName,
+        containerName,
+        userId,
+        hostId: host.id,
+        port,
+        version: originalServer.version,
+        minecraftVersion: originalServer.minecraftVersion,
+        allocatedRam: originalServer.allocatedRam,
+        allocatedCpu: originalServer.allocatedCpu,
+        maxPlayers: originalServer.maxPlayers,
+        difficulty: originalServer.difficulty,
+        gameMode: originalServer.gameMode,
+        enableWhitelist: originalServer.enableWhitelist,
+        status: ServerStatus.CREATING
+      },
+      include: { host: true, user: true }
+    });
+
+    try {
+      // Create server container on the agent
+      const result = await this.agentService.createServer(host, clonedServer);
+
+      if (!result.success) {
+        await prisma.minecraftServer.delete({ where: { id: clonedServer.id } });
+        throw new AppError(result.error || 'Failed to create cloned server', 500);
+      }
+
+      // Update host resource usage
+      await this.hostService.updateResourceUsage(host.id, originalServer.allocatedRam, originalServer.allocatedCpu);
+
+      // Update server status
+      const updatedServer = await prisma.minecraftServer.update({
+        where: { id: clonedServer.id },
+        data: { status: ServerStatus.STOPPED },
+        include: { host: true, user: true }
+      });
+
+      // Copy installed mods from original server
+      const originalMods = await prisma.serverMod.findMany({
+        where: { serverId: originalServer.id },
+        include: { mod: true }
+      });
+
+      if (originalMods.length > 0) {
+        await prisma.serverMod.createMany({
+          data: originalMods.map(sm => ({
+            serverId: clonedServer.id,
+            modId: sm.modId,
+            enabled: sm.enabled
+          }))
+        });
+
+        // Install mods on the new server
+        for (const serverMod of originalMods) {
+          try {
+            await this.agentService.installMod(host, updatedServer, serverMod.mod.fileName);
+          } catch (error) {
+            console.error(`Failed to install mod ${serverMod.mod.name} on cloned server:`, error);
+          }
+        }
+      }
+
+      WebSocketService.getInstance().broadcast({
+        event: WebSocketEvent.SERVER_CREATED,
+        data: updatedServer,
+        timestamp: new Date()
+      });
+
+      return updatedServer;
+    } catch (error) {
+      await prisma.minecraftServer.delete({ where: { id: clonedServer.id } });
+      throw error;
+    }
+  }
+
+  /**
+   * Execute a command on the Minecraft server
+   */
+  async executeCommand(serverId: string, userId: string, command: string): Promise<AgentResponse> {
+    const server = await this.getServerWithAuth(serverId, userId);
+
+    if (server.status !== ServerStatus.RUNNING) {
+      throw new AppError('Server must be running to execute commands', 400);
+    }
+
+    // Send command to agent
+    const result = await this.agentService.executeCommand(server.host, server, command);
+
+    if (!result.success) {
+      throw new AppError(result.error || 'Failed to execute command', 500);
+    }
+
+    return result;
+  }
+
+  /**
    * Optimized port allocation - uses database query instead of iteration
    * Finds the first available port in the range 25565-35565
    */

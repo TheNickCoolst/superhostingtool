@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ServerController } from '../controllers/server.controller';
 import { authenticate } from '../middleware/auth.middleware';
+import { strictRateLimiter } from '../middleware/rateLimit.middleware';
 import {
   createServerValidation,
   updateServerValidation,
@@ -27,16 +28,19 @@ router.post('/', createServerValidation, serverController.createServer);
 router.patch('/:id/resources', updateServerValidation, serverController.updateResources);
 
 // POST /api/servers/:id/start - Starte Server
-router.post('/:id/start', validateUUID, serverController.startServer);
+router.post('/:id/start', strictRateLimiter, validateUUID, serverController.startServer);
 
 // POST /api/servers/:id/stop - Stoppe Server
-router.post('/:id/stop', validateUUID, serverController.stopServer);
+router.post('/:id/stop', strictRateLimiter, validateUUID, serverController.stopServer);
 
 // POST /api/servers/:id/restart - Neustart mit minimaler Downtime
-router.post('/:id/restart', validateUUID, serverController.restartServer);
+router.post('/:id/restart', strictRateLimiter, validateUUID, serverController.restartServer);
 
 // POST /api/servers/:id/command - Führe Minecraft-Befehl aus
-router.post('/:id/command', executeCommandValidation, serverController.executeCommand);
+router.post('/:id/command', strictRateLimiter, executeCommandValidation, serverController.executeCommand);
+
+// POST /api/servers/:id/clone - Clone Server mit allen Einstellungen
+router.post('/:id/clone', validateUUID, serverController.cloneServer);
 
 // DELETE /api/servers/:id - Lösche Server
 router.delete('/:id', validateUUID, serverController.deleteServer);

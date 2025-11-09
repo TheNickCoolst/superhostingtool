@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { ServerStatus, BackupType } from '@prisma/client';
 import { AgentService } from './agent.service';
+import { prisma } from '../lib/prisma';
 
 
 /**
@@ -44,7 +45,8 @@ export class BackupScheduler {
 
       console.log(`Creating backups for ${servers.length} servers...`);
 
-      for (const server of servers) {
+      // Use Promise.allSettled for parallel backup processing (better performance)
+      const backupPromises = servers.map(async (server) => {
         try {
           const backupName = `auto-backup-${new Date().toISOString().split('T')[0]}`;
 
@@ -74,10 +76,17 @@ export class BackupScheduler {
           }
 
           console.log(`Backup created for server ${server.name}: ${backupName}`);
+          return { success: true, serverName: server.name };
         } catch (error) {
           console.error(`Failed to backup server ${server.name}:`, error);
+          return { success: false, serverName: server.name, error };
         }
-      }
+      });
+
+      const results = await Promise.allSettled(backupPromises);
+      const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+      const failed = results.length - successful;
+      console.log(`Backup process: ${successful} successful, ${failed} failed`);
 
       console.log('Automatic backup process completed');
 
