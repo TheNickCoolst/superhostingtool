@@ -1,12 +1,12 @@
 import { PrismaClient } from '@prisma/client';
 import cron from 'node-cron';
-import AgentService from './agent.service';
-import BackupService from './backup.service';
+import { AgentService } from './agent.service';
 
 const prisma = new PrismaClient();
 
 export class ScheduledTaskService {
   private scheduledJobs: Map<string, cron.ScheduledTask> = new Map();
+  private agentService = new AgentService();
 
   // Initialize all scheduled tasks from database
   async initializeTasks() {
@@ -59,24 +59,24 @@ export class ScheduledTaskService {
 
       switch (task.taskType) {
         case 'BACKUP':
-          await AgentService.createBackup(server.host, server, `scheduled-${Date.now()}`);
+          await this.agentService.createBackup(server.host, server, `scheduled-${Date.now()}`);
           break;
 
         case 'RESTART':
           if (server.status === 'RUNNING') {
-            await AgentService.restartServer(server.host, server);
+            await this.agentService.restartServer(server.host, server);
           }
           break;
 
         case 'COMMAND':
           if (server.status === 'RUNNING' && task.command) {
-            await AgentService.executeCommand(server.host, server, task.command);
+            await this.agentService.executeCommand(server.host, server, task.command);
           }
           break;
 
         case 'ANNOUNCEMENT':
           if (server.status === 'RUNNING' && task.command) {
-            await AgentService.executeCommand(
+            await this.agentService.executeCommand(
               server.host,
               server,
               `say ${task.command}`

@@ -9,6 +9,11 @@ export interface AuthRequest extends Request {
     email: string;
     role: UserRole;
   };
+  body: any;
+  params: any;
+  query: any;
+  file?: any;
+  files?: any;
 }
 
 export const authenticate = (

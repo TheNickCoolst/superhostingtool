@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma.singleton';
-import AgentService from './agent.service';
+import { AgentService } from './agent.service';
 import { logger } from '../lib/logger';
 import { MinecraftServer } from '@prisma/client';
 import * as crypto from 'crypto';
@@ -42,6 +42,7 @@ export interface ServerExportData {
 
 export class ServerImportExportService {
   private readonly EXPORT_VERSION = '1.0.0';
+  private agentService = new AgentService();
 
   /**
    * Export a server configuration to a shareable format
@@ -190,7 +191,7 @@ export class ServerImportExportService {
 
     try {
       // Create container
-      await AgentService.createServer(availableHost.id, {
+      await this.agentService.createServer(availableHost.id, {
         serverId: importedServer.id,
         containerName: importedServer.containerName,
         minecraftVersion: importedServer.minecraftVersion,
@@ -252,7 +253,7 @@ export class ServerImportExportService {
 
     try {
       // Read server.properties
-      const serverProperties = await AgentService.readFile(
+      const serverProperties = await this.agentService.readFile(
         hostId,
         containerName,
         'server.properties'
@@ -264,7 +265,7 @@ export class ServerImportExportService {
 
     try {
       // Read whitelist
-      const whitelist = await AgentService.readFile(hostId, containerName, 'whitelist.json');
+      const whitelist = await this.agentService.readFile(hostId, containerName, 'whitelist.json');
       config.whitelist = JSON.parse(whitelist);
     } catch (error) {
       logger.warn('Could not read whitelist.json', error);
@@ -272,7 +273,7 @@ export class ServerImportExportService {
 
     try {
       // Read ops
-      const ops = await AgentService.readFile(hostId, containerName, 'ops.json');
+      const ops = await this.agentService.readFile(hostId, containerName, 'ops.json');
       config.ops = JSON.parse(ops);
     } catch (error) {
       logger.warn('Could not read ops.json', error);
@@ -292,12 +293,12 @@ export class ServerImportExportService {
     // Write server.properties
     if (config.serverProperties) {
       const propertiesStr = this.stringifyProperties(config.serverProperties);
-      await AgentService.writeFile(hostId, containerName, 'server.properties', propertiesStr);
+      await this.agentService.writeFile(hostId, containerName, 'server.properties', propertiesStr);
     }
 
     // Write whitelist
     if (config.whitelist) {
-      await AgentService.writeFile(
+      await this.agentService.writeFile(
         hostId,
         containerName,
         'whitelist.json',
@@ -307,7 +308,7 @@ export class ServerImportExportService {
 
     // Write ops
     if (config.ops) {
-      await AgentService.writeFile(
+      await this.agentService.writeFile(
         hostId,
         containerName,
         'ops.json',

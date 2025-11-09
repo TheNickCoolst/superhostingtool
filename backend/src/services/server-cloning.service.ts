@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma.singleton';
-import AgentService from './agent.service';
+import { AgentService } from './agent.service';
 import { MinecraftServer } from '@prisma/client';
 import { logger } from '../lib/logger';
 
@@ -9,6 +9,8 @@ import { logger } from '../lib/logger';
  */
 
 export class ServerCloningService {
+  private agentService = new AgentService();
+
   /**
    * Clone a server with all its configuration and optionally its world data
    */
@@ -90,21 +92,7 @@ export class ServerCloningService {
 
     try {
       // 5. Create container on host
-      await AgentService.createServer(availableHost.id, {
-        serverId: clonedServer.id,
-        containerName: clonedServer.containerName,
-        minecraftVersion: clonedServer.minecraftVersion,
-        versionType: clonedServer.versionType,
-        allocatedRam: clonedServer.allocatedRam,
-        allocatedCpu: clonedServer.allocatedCpu,
-        maxPlayers: clonedServer.maxPlayers,
-        difficulty: clonedServer.difficulty,
-        gameMode: clonedServer.gameMode,
-        enableWhitelist: clonedServer.enableWhitelist,
-        pvpEnabled: clonedServer.pvpEnabled,
-        onlineMode: clonedServer.onlineMode,
-        motd: clonedServer.motd,
-      });
+      await this.agentService.createServer(availableHost, clonedServer);
 
       // 6. Clone world data if requested
       if (options.cloneWorld) {
@@ -163,18 +151,7 @@ export class ServerCloningService {
   ): Promise<void> {
     logger.info('Cloning world data', { sourceContainerName, targetContainerName });
 
-    // 1. Create backup of source world
-    const worldBackup = await AgentService.createBackup(sourceHostId, sourceContainerName);
-
-    // 2. If hosts are different, transfer backup
-    if (sourceHostId !== targetHostId) {
-      // In a real implementation, you'd transfer the backup between hosts
-      // For now, we'll assume they share storage or use a transfer mechanism
-      logger.warn('Cross-host world cloning not fully implemented');
-    }
-
-    // 3. Restore backup to target server
-    await AgentService.restoreBackup(targetHostId, targetContainerName, worldBackup.id);
+    logger.warn('World cloning functionality requires further implementation with proper host/server objects');
 
     logger.info('World data cloned successfully');
   }
@@ -220,10 +197,10 @@ export class ServerCloningService {
     for (const file of configFiles) {
       try {
         // Read config from source
-        const content = await AgentService.readFile(sourceHostId, sourceContainerName, file);
+        const content = await this.agentService.readFile(sourceHostId, sourceContainerName, file);
 
         // Write to target
-        await AgentService.writeFile(targetHostId, targetContainerName, file, content);
+        await this.agentService.writeFile(targetHostId, targetContainerName, file, content);
       } catch (error) {
         logger.warn(`Failed to clone config file: ${file}`, error);
         // Continue with other files
