@@ -18,6 +18,7 @@ import scheduledTaskRoutes from './routes/scheduled-task.routes';
 import notificationRoutes from './routes/notification.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import fileRoutes from './routes/file.routes';
+import serverAdvancedRoutes from './routes/server-advanced.routes';
 
 import { errorHandler, AppError } from './middleware/error.middleware';
 import { rateLimiter } from './middleware/rateLimit.middleware';
@@ -25,6 +26,7 @@ import { WebSocketService } from './services/websocket.service';
 import { BackupScheduler } from './services/backup.scheduler';
 import { HostHeartbeatService } from './services/host-heartbeat.service';
 import ScheduledTaskService from './services/scheduled-task.service';
+import HealthCheckService from './services/health-check.service';
 import { validateEnvironment, getEnv, getEnvNumber } from './lib/env-validation';
 import { logger } from './lib/logger';
 
@@ -82,6 +84,7 @@ app.use('/api/tasks', scheduledTaskRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/servers/advanced', serverAdvancedRoutes);
 
 // ==================== Error Handling ====================
 app.use(errorHandler);
@@ -108,6 +111,10 @@ const heartbeatService = new HostHeartbeatService();
 heartbeatService.start();
 logger.info('Host heartbeat service started');
 
+// Start health check service
+HealthCheckService.start();
+logger.info('Health check service started');
+
 // Initialize scheduled tasks
 ScheduledTaskService.initializeTasks().then(() => {
   logger.info('Scheduled tasks initialized');
@@ -123,6 +130,7 @@ process.on('SIGTERM', async () => {
   });
   backupScheduler.stop();
   heartbeatService.stop();
+  HealthCheckService.stop();
   ScheduledTaskService.stopAll();
 });
 
