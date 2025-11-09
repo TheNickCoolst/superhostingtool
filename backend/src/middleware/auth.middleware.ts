@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -54,4 +55,49 @@ export const authorize = (...roles: UserRole[]) => {
 
     next();
   };
+};
+
+/**
+ * Middleware to check if the authenticated user has access to a specific server
+ * Checks if the user is the owner of the server or an admin
+ */
+export const authorizeServerAccess = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const serverId = req.params.serverId || req.params.id;
+
+    if (!serverId) {
+      return res.status(400).json({ error: 'Server ID required' });
+    }
+
+    // Admins have access to all servers
+    if (req.user.role === UserRole.ADMIN) {
+      return next();
+    }
+
+    // Check if server exists and user is the owner
+    const server = await prisma.minecraftServer.findUnique({
+      where: { id: serverId },
+      select: { userId: true }
+    });
+
+    if (!server) {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+
+    if (server.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden: You do not have access to this server' });
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
 };

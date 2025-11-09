@@ -146,10 +146,39 @@ export class ServerController {
     try {
       const { id } = req.params;
       const { command } = req.body;
-      // TODO: Implement command execution
+      const userId = req.user!.id;
+
+      if (!command || typeof command !== 'string') {
+        return res.status(400).json({ error: 'Command is required and must be a string' });
+      }
+
+      const result = await this.serverService.executeCommand(id, userId, command);
+
       res.json({
-        message: 'Command executed',
-        command
+        message: 'Command executed successfully',
+        command,
+        result: result.data
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  cloneServer = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { name } = req.body;
+      const userId = req.user!.id;
+
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ error: 'Server name is required' });
+      }
+
+      const clonedServer = await this.serverService.cloneServer(id, userId, name);
+
+      res.status(201).json({
+        message: 'Server cloned successfully',
+        server: clonedServer
       });
     } catch (error) {
       next(error);
