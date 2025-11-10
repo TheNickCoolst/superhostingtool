@@ -412,3 +412,741 @@ enum LogLevel {
   SEVERE
   DEBUG
 }
+
+// ==================== Multi-Tenancy Models ====================
+model Organization {
+  id              String              @id @default(uuid())
+  name            String
+  slug            String              @unique
+  description     String?
+  plan            SubscriptionPlan    @default(FREE)
+  maxServers      Int                 @default(5)
+  maxMembers      Int                 @default(10)
+  customDomain    String?
+  logoUrl         String?
+  settings        Json?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  members         OrganizationMember[]
+  teams           Team[]
+  servers         OrganizationServer[]
+  quotas          ResourceQuota[]
+  apiKeys         ApiKey[]
+  webhooks        Webhook[]
+  auditLogs       AuditLog[]
+  invoices        Invoice[]
+
+  @@index([slug])
+  @@index([plan])
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+  CUSTOM
+}
+
+model OrganizationMember {
+  id              String          @id @default(uuid())
+  organizationId  String
+  userId          String
+  role            OrganizationRole @default(MEMBER)
+  permissions     String[]        @default([])
+  invitedBy       String?
+  joinedAt        DateTime        @default(now())
+
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+  BILLING_MANAGER
+}
+
+model Team {
+  id              String          @id @default(uuid())
+  organizationId  String
+  name            String
+  description     String?
+  color           String?
+  permissions     String[]        @default([])
+  createdAt       DateTime        @default(now())
+
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members         TeamMember[]
+  servers         TeamServer[]
+
+  @@index([organizationId])
+}
+
+model TeamMember {
+  id          String      @id @default(uuid())
+  teamId      String
+  userId      String
+  addedAt     DateTime    @default(now())
+
+  team        Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model OrganizationServer {
+  id              String          @id @default(uuid())
+  organizationId  String
+  serverId        String          @unique
+
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model TeamServer {
+  id          String      @id @default(uuid())
+  teamId      String
+  serverId    String
+  permissions String[]    @default([])
+  addedAt     DateTime    @default(now())
+
+  team        Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, serverId])
+}
+
+// ==================== Resource Quota Models ====================
+model ResourceQuota {
+  id              String          @id @default(uuid())
+  organizationId  String
+  resourceType    ResourceType
+  limit           Int
+  used            Int             @default(0)
+  resetPeriod     ResetPeriod     @default(MONTHLY)
+  lastReset       DateTime        @default(now())
+  alertThreshold  Int?            // percentage
+
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, resourceType])
+  @@index([organizationId])
+}
+
+enum ResourceType {
+  SERVERS
+  RAM_GB
+  STORAGE_GB
+  BANDWIDTH_GB
+  BACKUPS
+  API_REQUESTS
+}
+
+enum ResetPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+  NEVER
+}
+
+// ==================== API & Webhook Models ====================
+model ApiKey {
+  id              String          @id @default(uuid())
+  organizationId  String
+  name            String
+  key             String          @unique
+  permissions     String[]        @default([])
+  rateLimit       Int             @default(1000)
+  expiresAt       DateTime?
+  lastUsed        DateTime?
+  createdAt       DateTime        @default(now())
+
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([key])
+}
+
+model Webhook {
+  id              String          @id @default(uuid())
+  organizationId  String
+  name            String
+  url             String
+  secret          String
+  events          String[]        @default([])
+  enabled         Boolean         @default(true)
+  retryAttempts   Int             @default(3)
+  lastTriggered   DateTime?
+  failureCount    Int             @default(0)
+  createdAt       DateTime        @default(now())
+
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries      WebhookDelivery[]
+
+  @@index([organizationId])
+}
+
+model WebhookDelivery {
+  id              String              @id @default(uuid())
+  webhookId       String
+  event           String
+  payload         Json
+  status          WebhookStatus       @default(PENDING)
+  statusCode      Int?
+  response        String?
+  attempts        Int                 @default(0)
+  nextRetry       DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime            @default(now())
+
+  webhook         Webhook             @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum WebhookStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  RETRYING
+}
+
+// ==================== Audit & Compliance Models ====================
+model AuditLog {
+  id              String          @id @default(uuid())
+  organizationId  String
+  userId          String?
+  action          String
+  resource        String
+  resourceId      String?
+  ipAddress       String?
+  userAgent       String?
+  metadata        Json?
+  severity        AuditSeverity   @default(INFO)
+  timestamp       DateTime        @default(now())
+
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, timestamp])
+  @@index([userId])
+  @@index([action])
+}
+
+enum AuditSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+// ==================== Security Models ====================
+model TwoFactorAuth {
+  id              String          @id @default(uuid())
+  userId          String          @unique
+  secret          String
+  backupCodes     String[]
+  enabled         Boolean         @default(false)
+  verifiedAt      DateTime?
+  createdAt       DateTime        @default(now())
+
+  @@index([userId])
+}
+
+model Session {
+  id              String          @id @default(uuid())
+  userId          String
+  token           String          @unique
+  ipAddress       String?
+  userAgent       String?
+  expiresAt       DateTime
+  lastActivity    DateTime        @default(now())
+  createdAt       DateTime        @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model SecurityEvent {
+  id              String              @id @default(uuid())
+  userId          String?
+  eventType       SecurityEventType
+  ipAddress       String?
+  userAgent       String?
+  metadata        Json?
+  blocked         Boolean             @default(false)
+  timestamp       DateTime            @default(now())
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([timestamp])
+}
+
+enum SecurityEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGOUT
+  PASSWORD_CHANGED
+  EMAIL_CHANGED
+  TWO_FACTOR_ENABLED
+  TWO_FACTOR_DISABLED
+  API_KEY_CREATED
+  API_KEY_DELETED
+  SUSPICIOUS_ACTIVITY
+  RATE_LIMIT_EXCEEDED
+}
+
+// ==================== Billing Models ====================
+model Invoice {
+  id              String          @id @default(uuid())
+  organizationId  String
+  invoiceNumber   String          @unique
+  amount          Float
+  currency        String          @default("USD")
+  status          InvoiceStatus   @default(PENDING)
+  dueDate         DateTime
+  paidAt          DateTime?
+  items           Json
+  metadata        Json?
+  createdAt       DateTime        @default(now())
+
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  payments        Payment[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Payment {
+  id              String          @id @default(uuid())
+  invoiceId       String
+  amount          Float
+  currency        String          @default("USD")
+  method          PaymentMethod
+  transactionId   String?
+  status          PaymentStatus   @default(PENDING)
+  metadata        Json?
+  processedAt     DateTime?
+  createdAt       DateTime        @default(now())
+
+  invoice         Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([status])
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  PAYPAL
+  STRIPE
+  BANK_TRANSFER
+  CRYPTO
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// ==================== Plugin & Marketplace Models ====================
+model Plugin {
+  id                  String              @id @default(uuid())
+  name                String
+  slug                String              @unique
+  description         String
+  longDescription     String?
+  version             String
+  author              String
+  authorId            String?
+  category            PluginCategory
+  iconUrl             String?
+  screenshots         String[]            @default([])
+  downloadUrl         String
+  sourceUrl           String?
+  documentationUrl    String?
+  minecraftVersions   String[]            @default([])
+  dependencies        String[]            @default([])
+  price               Float               @default(0)
+  currency            String              @default("USD")
+  downloads           Int                 @default(0)
+  rating              Float               @default(0)
+  reviewCount         Int                 @default(0)
+  featured            Boolean             @default(false)
+  verified            Boolean             @default(false)
+  status              PluginStatus        @default(PENDING)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  installations       PluginInstallation[]
+  reviews             PluginReview[]
+
+  @@index([slug])
+  @@index([category])
+  @@index([featured])
+  @@index([status])
+}
+
+enum PluginCategory {
+  ADMINISTRATION
+  GAMEPLAY
+  MECHANICS
+  ECONOMY
+  CHAT
+  TELEPORTATION
+  WORLD_MANAGEMENT
+  PROTECTION
+  FUN
+  DEVELOPER_TOOLS
+  MISC
+}
+
+enum PluginStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+model PluginInstallation {
+  id              String          @id @default(uuid())
+  pluginId        String
+  serverId        String
+  version         String
+  enabled         Boolean         @default(true)
+  config          Json?
+  installedAt     DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  plugin          Plugin          @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@unique([pluginId, serverId])
+  @@index([serverId])
+}
+
+model PluginReview {
+  id          String      @id @default(uuid())
+  pluginId    String
+  userId      String
+  rating      Int
+  comment     String?
+  helpful     Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  plugin      Plugin      @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@unique([pluginId, userId])
+  @@index([pluginId])
+}
+
+// ==================== Network & Proxy Models ====================
+model ProxyServer {
+  id              String          @id @default(uuid())
+  name            String
+  type            ProxyType
+  hostId          String
+  port            Int
+  status          ServerStatus    @default(STOPPED)
+  maxPlayers      Int             @default(500)
+  allocatedRam    Int
+  containerName   String          @unique
+  config          Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  linkedServers   ProxyServerLink[]
+
+  @@index([type])
+  @@index([status])
+}
+
+enum ProxyType {
+  BUNGEECORD
+  VELOCITY
+  WATERFALL
+}
+
+model ProxyServerLink {
+  id          String          @id @default(uuid())
+  proxyId     String
+  serverId    String
+  priority    Int             @default(0)
+  restricted  Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+
+  proxy       ProxyServer     @relation(fields: [proxyId], references: [id], onDelete: Cascade)
+
+  @@unique([proxyId, serverId])
+  @@index([proxyId])
+}
+
+model DomainMapping {
+  id              String          @id @default(uuid())
+  domain          String          @unique
+  serverId        String?
+  proxyId         String?
+  sslEnabled      Boolean         @default(false)
+  sslCertPath     String?
+  verified        Boolean         @default(false)
+  verificationKey String?
+  createdAt       DateTime        @default(now())
+
+  @@index([domain])
+}
+
+// ==================== AI & Analytics Models ====================
+model AIRecommendation {
+  id              String              @id @default(uuid())
+  serverId        String
+  type            RecommendationType
+  title           String
+  description     String
+  impact          ImpactLevel
+  confidence      Float
+  metadata        Json?
+  applied         Boolean             @default(false)
+  appliedAt       DateTime?
+  dismissed       Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+
+  @@index([serverId])
+  @@index([type])
+  @@index([applied])
+}
+
+enum RecommendationType {
+  RESOURCE_OPTIMIZATION
+  PERFORMANCE_TUNING
+  SECURITY_IMPROVEMENT
+  COST_REDUCTION
+  PLAYER_RETENTION
+  BACKUP_STRATEGY
+}
+
+enum ImpactLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model PerformanceAlert {
+  id              String          @id @default(uuid())
+  serverId        String
+  alertType       AlertType
+  severity        AlertSeverity
+  message         String
+  metadata        Json?
+  resolved        Boolean         @default(false)
+  resolvedAt      DateTime?
+  acknowledgedBy  String?
+  createdAt       DateTime        @default(now())
+
+  @@index([serverId])
+  @@index([resolved])
+  @@index([severity])
+}
+
+enum AlertType {
+  HIGH_CPU
+  HIGH_RAM
+  LOW_TPS
+  HIGH_LATENCY
+  DISK_SPACE
+  CRASH_DETECTED
+  UNUSUAL_PLAYER_DROP
+  PLUGIN_ERROR
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+model PlayerAnalytics {
+  id              String          @id @default(uuid())
+  serverId        String
+  date            DateTime        @default(now())
+  uniquePlayers   Int
+  peakPlayers     Int
+  averagePlayers  Float
+  totalPlaytime   Int             // in minutes
+  newPlayers      Int
+  returningPlayers Int
+  churnRate       Float?
+  metadata        Json?
+
+  @@unique([serverId, date])
+  @@index([serverId])
+  @@index([date])
+}
+
+// ==================== Advanced Backup Models ====================
+model BackupPolicy {
+  id              String          @id @default(uuid())
+  serverId        String
+  name            String
+  enabled         Boolean         @default(true)
+  schedule        String          // cron expression
+  retentionDays   Int             @default(7)
+  maxBackups      Int             @default(10)
+  includeWorlds   Boolean         @default(true)
+  includePlugins  Boolean         @default(true)
+  includeConfig   Boolean         @default(true)
+  compression     CompressionType @default(GZIP)
+  encryption      Boolean         @default(false)
+  storageLocation StorageLocation @default(LOCAL)
+  s3Bucket        String?
+  s3Region        String?
+  createdAt       DateTime        @default(now())
+
+  @@index([serverId])
+}
+
+enum CompressionType {
+  NONE
+  GZIP
+  ZSTD
+  BZIP2
+}
+
+enum StorageLocation {
+  LOCAL
+  S3
+  GOOGLE_CLOUD
+  AZURE
+  FTP
+}
+
+model Snapshot {
+  id              String          @id @default(uuid())
+  serverId        String
+  name            String
+  description     String?
+  size            Int
+  worldData       Boolean         @default(true)
+  plugins         Boolean         @default(true)
+  config          Boolean         @default(true)
+  filePath        String
+  metadata        Json?
+  createdAt       DateTime        @default(now())
+
+  @@index([serverId])
+}
+
+// ==================== World Management Models ====================
+model WorldTemplate {
+  id              String          @id @default(uuid())
+  name            String
+  description     String
+  category        WorldCategory
+  minecraftVersion String
+  seed            String?
+  thumbnail       String?
+  downloadUrl     String
+  fileSize        Int
+  downloads       Int             @default(0)
+  rating          Float           @default(0)
+  featured        Boolean         @default(false)
+  createdBy       String?
+  createdAt       DateTime        @default(now())
+
+  @@index([category])
+  @@index([featured])
+}
+
+enum WorldCategory {
+  SURVIVAL
+  CREATIVE
+  ADVENTURE
+  PARKOUR
+  MINIGAMES
+  SKYBLOCK
+  PRISON
+  FACTIONS
+  CUSTOM
+}
+
+model ServerWorld {
+  id              String          @id @default(uuid())
+  serverId        String
+  name            String
+  dimension       WorldDimension
+  seed            String?
+  size            Int             // in MB
+  active          Boolean         @default(true)
+  generatorSettings Json?
+  lastModified    DateTime        @default(now())
+
+  @@unique([serverId, name, dimension])
+  @@index([serverId])
+}
+
+enum WorldDimension {
+  OVERWORLD
+  NETHER
+  END
+  CUSTOM
+}
+
+// ==================== Monitoring Integration Models ====================
+model PrometheusConfig {
+  id              String          @id @default(uuid())
+  serverId        String          @unique
+  enabled         Boolean         @default(false)
+  endpoint        String
+  scrapeInterval  Int             @default(15)
+  labels          Json?
+  createdAt       DateTime        @default(now())
+
+  @@index([enabled])
+}
+
+model GrafanaDashboard {
+  id              String          @id @default(uuid())
+  name            String
+  serverId        String?
+  organizationId  String?
+  dashboardJson   Json
+  isPublic        Boolean         @default(false)
+  createdBy       String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([serverId])
+  @@index([organizationId])
+}
+
+// ==================== Cache Models ====================
+model CacheEntry {
+  id              String          @id @default(uuid())
+  key             String          @unique
+  value           String
+  tags            String[]        @default([])
+  expiresAt       DateTime?
+  hitCount        Int             @default(0)
+  lastAccessed    DateTime        @default(now())
+  createdAt       DateTime        @default(now())
+
+  @@index([key])
+  @@index([expiresAt])
+  @@index([tags])
+}
