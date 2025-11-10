@@ -412,3 +412,741 @@ enum LogLevel {
   SEVERE
   DEBUG
 }
+
+// ==================== AI/ML & Automation Models ====================
+model AIRecommendation {
+  id              String              @id @default(uuid())
+  serverId        String
+  type            RecommendationType
+  title           String
+  description     String
+  priority        RecommendationPriority @default(MEDIUM)
+  potentialImpact String?
+  suggestedAction String
+  confidence      Float               // 0.0 - 1.0
+  isApplied       Boolean             @default(false)
+  appliedAt       DateTime?
+  createdAt       DateTime            @default(now())
+  expiresAt       DateTime?
+
+  @@index([serverId, isApplied])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+enum RecommendationType {
+  PERFORMANCE_OPTIMIZATION
+  RESOURCE_ADJUSTMENT
+  COST_OPTIMIZATION
+  SECURITY_IMPROVEMENT
+  BACKUP_STRATEGY
+  PLUGIN_SUGGESTION
+  VERSION_UPGRADE
+  MAINTENANCE_ALERT
+}
+
+enum RecommendationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model AnomalyDetection {
+  id              String          @id @default(uuid())
+  serverId        String
+  metricType      String          // cpu, ram, tps, players, etc.
+  detectedValue   Float
+  expectedValue   Float
+  deviation       Float           // percentage
+  severity        AlertSeverity
+  isResolved      Boolean         @default(false)
+  resolvedAt      DateTime?
+  detectedAt      DateTime        @default(now())
+
+  @@index([serverId, isResolved])
+  @@index([severity])
+  @@index([detectedAt])
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+model PredictiveMaintenance {
+  id                String          @id @default(uuid())
+  serverId          String
+  predictedIssue    String
+  probability       Float           // 0.0 - 1.0
+  estimatedTimeToIssue Int?        // in seconds
+  recommendedAction String
+  mlModelVersion    String
+  createdAt         DateTime        @default(now())
+
+  @@index([serverId])
+  @@index([probability])
+}
+
+model AutoScalingPolicy {
+  id              String          @id @default(uuid())
+  serverId        String
+  enabled         Boolean         @default(true)
+  minRam          Int             // MB
+  maxRam          Int             // MB
+  minCpu          Float
+  maxCpu          Float
+  scaleUpThreshold    Float       @default(80) // percentage
+  scaleDownThreshold  Float       @default(30) // percentage
+  cooldownPeriod      Int         @default(300) // seconds
+  lastScalingAction   DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@unique([serverId])
+  @@index([enabled])
+}
+
+model CostTracking {
+  id              String          @id @default(uuid())
+  serverId        String
+  userId          String
+  date            DateTime        @db.Date
+  ramCost         Float           @default(0)
+  cpuCost         Float           @default(0)
+  storageCost     Float           @default(0)
+  networkCost     Float           @default(0)
+  totalCost       Float           @default(0)
+  currency        String          @default("USD")
+
+  @@unique([serverId, date])
+  @@index([userId, date])
+  @@index([date])
+}
+
+// ==================== Gaming & Achievement System ====================
+model Achievement {
+  id              String              @id @default(uuid())
+  name            String
+  description     String
+  icon            String?
+  category        AchievementCategory
+  points          Int                 @default(10)
+  rarity          AchievementRarity   @default(COMMON)
+  requirement     Json                // Flexible requirement structure
+  isHidden        Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+
+  playerAchievements PlayerAchievement[]
+
+  @@index([category])
+  @@index([rarity])
+}
+
+enum AchievementCategory {
+  SERVER_MANAGEMENT
+  PERFORMANCE
+  COMMUNITY
+  CREATIVITY
+  LONGEVITY
+  SPECIAL
+}
+
+enum AchievementRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+model PlayerAchievement {
+  id              String          @id @default(uuid())
+  userId          String
+  achievementId   String
+  progress        Float           @default(0) // 0.0 - 1.0
+  isCompleted     Boolean         @default(false)
+  completedAt     DateTime?
+  unlockedAt      DateTime        @default(now())
+
+  achievement     Achievement     @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId, isCompleted])
+}
+
+model Leaderboard {
+  id              String              @id @default(uuid())
+  type            LeaderboardType
+  period          LeaderboardPeriod   @default(ALL_TIME)
+  startDate       DateTime?
+  endDate         DateTime?
+  updatedAt       DateTime            @updatedAt
+
+  entries         LeaderboardEntry[]
+
+  @@index([type, period])
+}
+
+enum LeaderboardType {
+  TOTAL_UPTIME
+  BEST_PERFORMANCE
+  MOST_PLAYERS
+  ACHIEVEMENT_POINTS
+  SERVER_COUNT
+  COMMUNITY_RATING
+}
+
+enum LeaderboardPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+  ALL_TIME
+}
+
+model LeaderboardEntry {
+  id              String          @id @default(uuid())
+  leaderboardId   String
+  userId          String
+  rank            Int
+  score           Float
+  metadata        Json?           // Additional data
+  updatedAt       DateTime        @updatedAt
+
+  leaderboard     Leaderboard     @relation(fields: [leaderboardId], references: [id], onDelete: Cascade)
+
+  @@unique([leaderboardId, userId])
+  @@index([leaderboardId, rank])
+}
+
+model Tournament {
+  id              String              @id @default(uuid())
+  name            String
+  description     String
+  gameType        String              // PvP, Building, Survival, etc.
+  startDate       DateTime
+  endDate         DateTime
+  maxParticipants Int?
+  prizePool       Json?               // Prize structure
+  status          TournamentStatus    @default(UPCOMING)
+  rules           String
+  createdBy       String
+  createdAt       DateTime            @default(now())
+
+  participants    TournamentParticipant[]
+
+  @@index([status])
+  @@index([startDate])
+}
+
+enum TournamentStatus {
+  UPCOMING
+  REGISTRATION_OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model TournamentParticipant {
+  id              String          @id @default(uuid())
+  tournamentId    String
+  userId          String
+  serverId        String?
+  score           Float           @default(0)
+  rank            Int?
+  status          ParticipantStatus @default(REGISTERED)
+  joinedAt        DateTime        @default(now())
+
+  tournament      Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, userId])
+  @@index([tournamentId, rank])
+}
+
+enum ParticipantStatus {
+  REGISTERED
+  ACTIVE
+  ELIMINATED
+  WINNER
+  DISQUALIFIED
+}
+
+// ==================== Social & Community Features ====================
+model Friendship {
+  id              String              @id @default(uuid())
+  userId          String
+  friendId        String
+  status          FriendshipStatus    @default(PENDING)
+  requestedAt     DateTime            @default(now())
+  acceptedAt      DateTime?
+
+  @@unique([userId, friendId])
+  @@index([userId, status])
+  @@index([friendId, status])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+model Guild {
+  id              String          @id @default(uuid())
+  name            String          @unique
+  tag             String          @unique
+  description     String
+  ownerId         String
+  level           Int             @default(1)
+  experience      Int             @default(0)
+  maxMembers      Int             @default(50)
+  isPublic        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  members         GuildMember[]
+  servers         GuildServer[]
+
+  @@index([name])
+  @@index([isPublic])
+}
+
+model GuildMember {
+  id              String          @id @default(uuid())
+  guildId         String
+  userId          String
+  role            GuildRole       @default(MEMBER)
+  joinedAt        DateTime        @default(now())
+  contribution    Int             @default(0)
+
+  guild           Guild           @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId])
+  @@index([guildId, role])
+}
+
+enum GuildRole {
+  OWNER
+  OFFICER
+  MEMBER
+  RECRUIT
+}
+
+model GuildServer {
+  id              String          @id @default(uuid())
+  guildId         String
+  serverId        String
+  addedAt         DateTime        @default(now())
+
+  guild           Guild           @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, serverId])
+  @@index([guildId])
+}
+
+model ActivityFeed {
+  id              String          @id @default(uuid())
+  userId          String
+  activityType    ActivityType
+  title           String
+  description     String?
+  metadata        Json?
+  isPublic        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+
+  @@index([userId, createdAt])
+  @@index([isPublic, createdAt])
+}
+
+enum ActivityType {
+  SERVER_CREATED
+  SERVER_STARTED
+  SERVER_STOPPED
+  ACHIEVEMENT_UNLOCKED
+  FRIEND_ADDED
+  GUILD_JOINED
+  TOURNAMENT_WON
+  MILESTONE_REACHED
+}
+
+model ChatMessage {
+  id              String          @id @default(uuid())
+  senderId        String
+  recipientId     String?         // null for guild/global chat
+  guildId         String?
+  content         String
+  isRead          Boolean         @default(false)
+  sentAt          DateTime        @default(now())
+
+  @@index([senderId, recipientId])
+  @@index([guildId, sentAt])
+}
+
+// ==================== Marketplace Models ====================
+model MarketplaceListing {
+  id              String              @id @default(uuid())
+  sellerId        String
+  listingType     MarketplaceType
+  itemId          String              // Reference to mod, plugin, template, or server
+  name            String
+  description     String
+  price           Float
+  currency        String              @default("USD")
+  category        String
+  tags            String[]            @default([])
+  downloads       Int                 @default(0)
+  rating          Float?
+  reviewCount     Int                 @default(0)
+  isVerified      Boolean             @default(false)
+  isFeatured      Boolean             @default(false)
+  status          ListingStatus       @default(PENDING)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  reviews         MarketplaceReview[]
+  purchases       MarketplacePurchase[]
+
+  @@index([listingType, status])
+  @@index([sellerId])
+  @@index([category])
+  @@index([rating])
+  @@index([isFeatured])
+}
+
+enum MarketplaceType {
+  MOD
+  PLUGIN
+  TEMPLATE
+  SERVER
+  WORLD
+  ADDON
+}
+
+enum ListingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+model MarketplaceReview {
+  id              String              @id @default(uuid())
+  listingId       String
+  userId          String
+  rating          Int                 // 1-5
+  comment         String?
+  isVerifiedPurchase Boolean          @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  listing         MarketplaceListing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, userId])
+  @@index([listingId, rating])
+}
+
+model MarketplacePurchase {
+  id              String              @id @default(uuid())
+  listingId       String
+  buyerId         String
+  price           Float
+  currency        String
+  transactionId   String              @unique
+  status          PurchaseStatus      @default(COMPLETED)
+  purchasedAt     DateTime            @default(now())
+
+  listing         MarketplaceListing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([buyerId, purchasedAt])
+  @@index([listingId])
+}
+
+enum PurchaseStatus {
+  PENDING
+  COMPLETED
+  REFUNDED
+  FAILED
+}
+
+model UserCredits {
+  id              String          @id @default(uuid())
+  userId          String          @unique
+  balance         Float           @default(0)
+  currency        String          @default("USD")
+  updatedAt       DateTime        @updatedAt
+
+  transactions    CreditTransaction[]
+}
+
+model CreditTransaction {
+  id              String              @id @default(uuid())
+  creditsId       String
+  amount          Float
+  type            TransactionType
+  description     String
+  metadata        Json?
+  balanceAfter    Float
+  createdAt       DateTime            @default(now())
+
+  credits         UserCredits         @relation(fields: [creditsId], references: [id], onDelete: Cascade)
+
+  @@index([creditsId, createdAt])
+}
+
+enum TransactionType {
+  PURCHASE
+  REFUND
+  REWARD
+  DEPOSIT
+  WITHDRAWAL
+  BONUS
+}
+
+// ==================== Advanced Server Features ====================
+model ServerCluster {
+  id              String          @id @default(uuid())
+  name            String
+  description     String
+  ownerId         String
+  proxyType       ProxyType       @default(BUNGEECORD)
+  proxyServerId   String?
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  servers         ServerClusterMember[]
+
+  @@index([ownerId])
+  @@index([isActive])
+}
+
+enum ProxyType {
+  BUNGEECORD
+  VELOCITY
+  WATERFALL
+}
+
+model ServerClusterMember {
+  id              String          @id @default(uuid())
+  clusterId       String
+  serverId        String
+  serverType      String          // lobby, survival, creative, minigame, etc.
+  priority        Int             @default(0)
+  joinedAt        DateTime        @default(now())
+
+  cluster         ServerCluster   @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+
+  @@unique([clusterId, serverId])
+  @@index([clusterId])
+}
+
+model ServerSnapshot {
+  id              String          @id @default(uuid())
+  serverId        String
+  name            String
+  description     String?
+  snapshotType    SnapshotType    @default(MANUAL)
+  size            Int             // bytes
+  filePath        String
+  isEncrypted     Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  expiresAt       DateTime?
+
+  @@index([serverId, createdAt])
+}
+
+enum SnapshotType {
+  MANUAL
+  AUTO
+  PRE_MIGRATION
+  PRE_UPDATE
+}
+
+model ServerMigration {
+  id              String              @id @default(uuid())
+  serverId        String
+  fromHostId      String
+  toHostId        String
+  status          MigrationStatus     @default(PENDING)
+  progress        Float               @default(0)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  error           String?
+  createdAt       DateTime            @default(now())
+
+  @@index([serverId])
+  @@index([status])
+}
+
+enum MigrationStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ==================== Advanced Monitoring ====================
+model HealthCheck {
+  id              String          @id @default(uuid())
+  serverId        String
+  checkType       HealthCheckType
+  status          HealthStatus
+  responseTime    Int?            // milliseconds
+  message         String?
+  checkedAt       DateTime        @default(now())
+
+  @@index([serverId, checkedAt])
+  @@index([status])
+}
+
+enum HealthCheckType {
+  PING
+  QUERY
+  RCON
+  WEB
+  CUSTOM
+}
+
+enum HealthStatus {
+  HEALTHY
+  DEGRADED
+  UNHEALTHY
+  UNKNOWN
+}
+
+model PerformanceReport {
+  id                  String          @id @default(uuid())
+  serverId            String
+  reportPeriod        ReportPeriod
+  startDate           DateTime
+  endDate             DateTime
+  avgCpuUsage         Float
+  avgRamUsage         Float
+  avgTps              Float
+  avgPlayers          Float
+  peakPlayers         Int
+  totalUptime         Int             // seconds
+  totalDowntime       Int             // seconds
+  crashCount          Int             @default(0)
+  performanceScore    Float?          // 0-100
+  generatedAt         DateTime        @default(now())
+
+  @@index([serverId, reportPeriod])
+  @@index([generatedAt])
+}
+
+enum ReportPeriod {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model AlertRule {
+  id              String          @id @default(uuid())
+  serverId        String?         // null = global rule
+  name            String
+  description     String?
+  metric          String          // cpu, ram, tps, players, etc.
+  operator        ComparisonOperator
+  threshold       Float
+  duration        Int?            // seconds - how long condition must persist
+  severity        AlertSeverity
+  isEnabled       Boolean         @default(true)
+  notifyMethods   String[]        @default([]) // email, webhook, discord, etc.
+  cooldownPeriod  Int             @default(300) // seconds
+  lastTriggered   DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([serverId, isEnabled])
+}
+
+enum ComparisonOperator {
+  GREATER_THAN
+  LESS_THAN
+  EQUAL
+  NOT_EQUAL
+  GREATER_OR_EQUAL
+  LESS_OR_EQUAL
+}
+
+model Incident {
+  id              String          @id @default(uuid())
+  serverId        String
+  title           String
+  description     String
+  severity        AlertSeverity
+  status          IncidentStatus  @default(OPEN)
+  detectedAt      DateTime        @default(now())
+  acknowledgedAt  DateTime?
+  resolvedAt      DateTime?
+  acknowledgedBy  String?
+  resolvedBy      String?
+  resolution      String?
+
+  @@index([serverId, status])
+  @@index([severity, detectedAt])
+}
+
+enum IncidentStatus {
+  OPEN
+  ACKNOWLEDGED
+  INVESTIGATING
+  RESOLVED
+  FALSE_POSITIVE
+}
+
+// ==================== Integration & API ====================
+model APIKey {
+  id              String          @id @default(uuid())
+  userId          String
+  name            String
+  key             String          @unique
+  permissions     String[]        @default([])
+  rateLimit       Int             @default(1000) // requests per hour
+  isActive        Boolean         @default(true)
+  lastUsed        DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime        @default(now())
+
+  @@index([userId])
+  @@index([key])
+}
+
+model Webhook {
+  id              String          @id @default(uuid())
+  userId          String
+  url             String
+  events          String[]        @default([])
+  secret          String?
+  isActive        Boolean         @default(true)
+  failureCount    Int             @default(0)
+  lastTriggered   DateTime?
+  lastSuccess     DateTime?
+  lastFailure     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([userId, isActive])
+}
+
+model AuditLog {
+  id              String          @id @default(uuid())
+  userId          String
+  action          String
+  resourceType    String
+  resourceId      String?
+  ipAddress       String?
+  userAgent       String?
+  metadata        Json?
+  createdAt       DateTime        @default(now())
+
+  @@index([userId, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+}
