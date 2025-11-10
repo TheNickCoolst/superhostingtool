@@ -1,7 +1,6 @@
 import prisma from '../lib/prisma.singleton';
-import AgentService from './agent.service';
+import { AgentService } from './agent.service';
 import { logger } from '../lib/logger';
-import { MinecraftServerStatus } from '@prisma/client';
 
 /**
  * Health Check Service
