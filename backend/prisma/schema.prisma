@@ -17,10 +17,16 @@ model User {
   password      String
   role          UserRole        @default(USER)
   maxServers    Int             @default(9)
+  twoFactorEnabled Boolean      @default(false)
+  twoFactorSecret  String?
+  apiKeys       ApiKey[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
   servers       MinecraftServer[]
+  organizations OrganizationMember[]
+  favorites     ServerFavorite[]
+  auditLogs     AuditLog[]
 
   @@index([email])
   @@index([username])
@@ -30,6 +36,36 @@ enum UserRole {
   ADMIN
   USER
   MODERATOR
+}
+
+// ==================== 2FA Models ====================
+model TwoFactorBackupCode {
+  id          String    @id @default(uuid())
+  userId      String
+  code        String
+  used        Boolean   @default(false)
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([code])
+}
+
+// ==================== API Key Models ====================
+model ApiKey {
+  id          String    @id @default(uuid())
+  userId      String
+  name        String
+  key         String    @unique
+  scopes      String[]  @default(["read"])
+  lastUsed    DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([key])
 }
 
 // ==================== Host Models ====================
@@ -81,6 +117,9 @@ model MinecraftServer {
   gameMode          GameMode            @default(SURVIVAL)
   enableWhitelist   Boolean             @default(false)
   containerName     String              @unique
+  color             String?             // Hex color for UI
+  icon              String?             // Icon name or emoji
+  hibernating       Boolean             @default(false)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   lastStarted       DateTime?
@@ -96,10 +135,14 @@ model MinecraftServer {
   scheduledTasks    ScheduledTask[]
   metrics           ServerMetrics[]
   consoleLogs       ConsoleLog[]
+  tags              ServerTag[]
+  favorites         ServerFavorite[]
+  groups            ServerGroupMember[]
 
   @@index([userId])
   @@index([hostId])
   @@index([status])
+  @@index([hibernating])
 }
 
 enum ServerStatus {
@@ -411,4 +454,326 @@ enum LogLevel {
   ERROR
   SEVERE
   DEBUG
+}
+
+// ==================== Server Organization Models ====================
+model ServerTag {
+  id          String          @id @default(uuid())
+  serverId    String
+  name        String
+  color       String?
+  createdAt   DateTime        @default(now())
+
+  server      MinecraftServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, name])
+  @@index([serverId])
+}
+
+model ServerFavorite {
+  id          String          @id @default(uuid())
+  userId      String
+  serverId    String
+  createdAt   DateTime        @default(now())
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server      MinecraftServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serverId])
+  @@index([userId])
+}
+
+model ServerGroup {
+  id          String              @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  color       String?
+  icon        String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  servers     ServerGroupMember[]
+
+  @@index([userId])
+}
+
+model ServerGroupMember {
+  id          String          @id @default(uuid())
+  groupId     String
+  serverId    String
+  addedAt     DateTime        @default(now())
+
+  group       ServerGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  server      MinecraftServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, serverId])
+  @@index([groupId])
+  @@index([serverId])
+}
+
+// ==================== Team/Organization Models ====================
+model Organization {
+  id          String                @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  plan        OrganizationPlan      @default(FREE)
+  maxMembers  Int                   @default(5)
+  maxServers  Int                   @default(10)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  members     OrganizationMember[]
+  invitations OrganizationInvitation[]
+
+  @@index([ownerId])
+}
+
+enum OrganizationPlan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+model OrganizationMember {
+  id              String        @id @default(uuid())
+  organizationId  String
+  userId          String
+  role            OrgRole       @default(MEMBER)
+  joinedAt        DateTime      @default(now())
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model OrganizationInvitation {
+  id              String        @id @default(uuid())
+  organizationId  String
+  email           String
+  role            OrgRole       @default(MEMBER)
+  token           String        @unique
+  expiresAt       DateTime
+  createdAt       DateTime      @default(now())
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([organizationId])
+}
+
+// ==================== Audit Log Models ====================
+model AuditLog {
+  id          String      @id @default(uuid())
+  userId      String
+  action      String
+  resourceType String
+  resourceId   String?
+  details     Json?
+  ipAddress   String?
+  userAgent   String?
+  timestamp   DateTime    @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([resourceType, resourceId])
+  @@index([timestamp])
+  @@index([action])
+}
+
+// ==================== Bulk Operations Models ====================
+model BulkOperation {
+  id              String              @id @default(uuid())
+  userId          String
+  operationType   BulkOperationType
+  status          BulkOperationStatus @default(PENDING)
+  totalTargets    Int
+  completed       Int                 @default(0)
+  failed          Int                 @default(0)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime            @default(now())
+
+  results         BulkOperationResult[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum BulkOperationType {
+  START_SERVERS
+  STOP_SERVERS
+  RESTART_SERVERS
+  UPDATE_RESOURCES
+  BACKUP_SERVERS
+  UPDATE_CONFIG
+  INSTALL_PLUGIN
+  EXECUTE_COMMAND
+}
+
+enum BulkOperationStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model BulkOperationResult {
+  id              String          @id @default(uuid())
+  operationId     String
+  serverId        String
+  status          String
+  message         String?
+  timestamp       DateTime        @default(now())
+
+  operation       BulkOperation   @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@index([operationId])
+  @@index([serverId])
+}
+
+// ==================== Plugin Marketplace Models ====================
+model MarketplacePlugin {
+  id              String              @id @default(uuid())
+  name            String
+  description     String
+  longDescription String?
+  author          String
+  authorId        String?
+  version         String
+  minecraftVersions String[]
+  category        PluginCategory
+  tags            String[]            @default([])
+  downloads       Int                 @default(0)
+  rating          Float               @default(0)
+  reviewCount     Int                 @default(0)
+  price           Float               @default(0) // 0 = free
+  fileUrl         String?
+  fileName        String
+  fileSize        Int
+  thumbnailUrl    String?
+  screenshots     String[]            @default([])
+  dependencies    String[]            @default([])
+  isPublic        Boolean             @default(true)
+  isFeatured      Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  reviews         PluginReview[]
+  installations   PluginInstallation[]
+
+  @@index([category])
+  @@index([isPublic, isFeatured])
+  @@index([downloads])
+  @@index([rating])
+}
+
+enum PluginCategory {
+  GAMEPLAY
+  MECHANICS
+  ECONOMY
+  ADMIN_TOOLS
+  WORLD_MANAGEMENT
+  CHAT
+  UTILITIES
+  FUN
+  PROTECTION
+  MINIGAMES
+}
+
+model PluginReview {
+  id          String            @id @default(uuid())
+  pluginId    String
+  userId      String
+  rating      Int               // 1-5
+  comment     String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  plugin      MarketplacePlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@unique([pluginId, userId])
+  @@index([pluginId])
+  @@index([rating])
+}
+
+model PluginInstallation {
+  id          String            @id @default(uuid())
+  pluginId    String
+  serverId    String
+  version     String
+  installedAt DateTime          @default(now())
+
+  plugin      MarketplacePlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@unique([pluginId, serverId])
+  @@index([pluginId])
+  @@index([serverId])
+}
+
+// ==================== AI & Optimization Models ====================
+model OptimizationRecommendation {
+  id              String                  @id @default(uuid())
+  serverId        String
+  type            OptimizationType
+  severity        RecommendationSeverity
+  title           String
+  description     String
+  estimatedImpact String
+  applied         Boolean                 @default(false)
+  appliedAt       DateTime?
+  createdAt       DateTime                @default(now())
+
+  @@index([serverId])
+  @@index([applied])
+  @@index([severity])
+}
+
+enum OptimizationType {
+  RAM_OPTIMIZATION
+  CPU_OPTIMIZATION
+  JVM_FLAGS
+  PLUGIN_OPTIMIZATION
+  WORLD_OPTIMIZATION
+  NETWORK_OPTIMIZATION
+  DISK_OPTIMIZATION
+}
+
+enum RecommendationSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model ServerHealthCheck {
+  id              String      @id @default(uuid())
+  serverId        String
+  healthy         Boolean
+  healthScore     Int         // 0-100
+  issues          Json[]
+  cpuUsage        Float
+  memoryUsage     Float
+  diskUsage       Float?
+  tps             Float?
+  responsive      Boolean
+  lastChecked     DateTime    @default(now())
+
+  @@index([serverId])
+  @@index([healthy])
+  @@index([lastChecked])
 }
