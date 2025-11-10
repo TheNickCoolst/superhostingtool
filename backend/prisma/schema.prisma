@@ -412,3 +412,681 @@ enum LogLevel {
   SEVERE
   DEBUG
 }
+
+// ==================== AI/ML Performance Models ====================
+model AIPerformancePrediction {
+  id                  String          @id @default(uuid())
+  serverId            String
+  predictedCpu        Float
+  predictedRam        Int
+  predictedPlayers    Int
+  predictedTps        Float
+  confidence          Float           // 0.0 - 1.0
+  timeframe           Int             // minutes ahead
+  predictionTime      DateTime        @default(now())
+  actualCpu           Float?
+  actualRam           Int?
+  actualPlayers       Int?
+  accuracy            Float?
+
+  @@index([serverId, predictionTime])
+  @@index([predictionTime])
+}
+
+model AnomalyDetection {
+  id              String          @id @default(uuid())
+  serverId        String
+  anomalyType     AnomalyType
+  severity        AnomalySeverity
+  description     String
+  metricValue     Float
+  expectedValue   Float
+  deviation       Float
+  detectedAt      DateTime        @default(now())
+  resolved        Boolean         @default(false)
+  resolvedAt      DateTime?
+  autoResolved    Boolean         @default(false)
+
+  @@index([serverId, detectedAt])
+  @@index([resolved])
+  @@index([severity])
+}
+
+enum AnomalyType {
+  CPU_SPIKE
+  MEMORY_LEAK
+  TPS_DROP
+  PLAYER_SURGE
+  DISK_FULL
+  NETWORK_LATENCY
+  CRASH_PATTERN
+}
+
+enum AnomalySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model ResourceOptimization {
+  id                    String          @id @default(uuid())
+  serverId              String
+  currentRam            Int
+  currentCpu            Float
+  recommendedRam        Int
+  recommendedCpu        Float
+  potentialSavings      Float           // in percentage
+  reasoning             String
+  confidence            Float
+  applied               Boolean         @default(false)
+  appliedAt             DateTime?
+  createdAt             DateTime        @default(now())
+
+  @@index([serverId, createdAt])
+  @@index([applied])
+}
+
+// ==================== Plugin Marketplace Models ====================
+model MarketplacePlugin {
+  id                String              @id @default(uuid())
+  name              String
+  slug              String              @unique
+  description       String
+  longDescription   String?
+  category          PluginCategory
+  author            String
+  authorUrl         String?
+  iconUrl           String?
+  sourceUrl         String?
+  minecraftVersions String[]
+  modLoaders        ModLoader[]
+  curseforgeId      String?             @unique
+  modrinthId        String?             @unique
+  downloads         Int                 @default(0)
+  rating            Float               @default(0)
+  ratingCount       Int                 @default(0)
+  featured          Boolean             @default(false)
+  verified          Boolean             @default(false)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  versions          PluginVersion[]
+  installations     PluginInstallation[]
+
+  @@index([category])
+  @@index([featured])
+  @@index([downloads])
+  @@index([rating])
+}
+
+enum PluginCategory {
+  OPTIMIZATION
+  GAMEPLAY
+  MECHANICS
+  WORLD_GEN
+  MOBS
+  ITEMS
+  ECONOMY
+  ADMIN_TOOLS
+  UTILITY
+  DECORATION
+  TECHNOLOGY
+  MAGIC
+  ADVENTURE
+}
+
+model PluginVersion {
+  id                String              @id @default(uuid())
+  pluginId          String
+  version           String
+  minecraftVersion  String
+  modLoader         ModLoader
+  downloadUrl       String
+  fileSize          Int
+  changelog         String?
+  isStable          Boolean             @default(true)
+  downloads         Int                 @default(0)
+  createdAt         DateTime            @default(now())
+
+  plugin            MarketplacePlugin   @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@unique([pluginId, version, minecraftVersion, modLoader])
+  @@index([pluginId])
+}
+
+model PluginInstallation {
+  id              String              @id @default(uuid())
+  serverId        String
+  pluginId        String
+  versionId       String
+  status          InstallStatus       @default(PENDING)
+  installedAt     DateTime            @default(now())
+
+  plugin          MarketplacePlugin   @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, pluginId])
+  @@index([serverId])
+  @@index([status])
+}
+
+enum InstallStatus {
+  PENDING
+  DOWNLOADING
+  INSTALLING
+  INSTALLED
+  FAILED
+  UNINSTALLING
+}
+
+// ==================== Multi-Server Network Models ====================
+model ServerNetwork {
+  id              String              @id @default(uuid())
+  name            String
+  description     String?
+  networkType     NetworkType
+  proxyServerId   String?             @unique
+  proxyPort       Int?
+  proxyHost       String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  members         NetworkMember[]
+
+  @@index([networkType])
+}
+
+enum NetworkType {
+  BUNGEECORD
+  VELOCITY
+  WATERFALL
+}
+
+model NetworkMember {
+  id              String          @id @default(uuid())
+  networkId       String
+  serverId        String
+  serverName      String
+  priority        Int             @default(0)
+  restricted      Boolean         @default(false)
+  motd            String?
+  addedAt         DateTime        @default(now())
+
+  network         ServerNetwork   @relation(fields: [networkId], references: [id], onDelete: Cascade)
+
+  @@unique([networkId, serverId])
+  @@index([networkId])
+}
+
+// ==================== Advanced Security Models ====================
+model AuditLog {
+  id              String          @id @default(uuid())
+  userId          String
+  userName        String
+  action          AuditAction
+  resource        String          // e.g., "server", "user", "backup"
+  resourceId      String
+  details         Json?
+  ipAddress       String?
+  userAgent       String?
+  success         Boolean         @default(true)
+  errorMessage    String?
+  timestamp       DateTime        @default(now())
+
+  @@index([userId, timestamp])
+  @@index([resource, resourceId])
+  @@index([timestamp])
+  @@index([action])
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  START
+  STOP
+  RESTART
+  BACKUP
+  RESTORE
+  LOGIN
+  LOGOUT
+  CONFIG_CHANGE
+  PERMISSION_CHANGE
+  FILE_UPLOAD
+  FILE_DELETE
+  COMMAND_EXECUTE
+}
+
+model TwoFactorAuth {
+  id              String          @id @default(uuid())
+  userId          String          @unique
+  secret          String
+  enabled         Boolean         @default(false)
+  backupCodes     String[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([userId])
+}
+
+model SecurityScan {
+  id              String          @id @default(uuid())
+  serverId        String
+  scanType        ScanType
+  status          ScanStatus      @default(PENDING)
+  vulnerabilities Json[]
+  severity        String?
+  startedAt       DateTime        @default(now())
+  completedAt     DateTime?
+
+  @@index([serverId, startedAt])
+  @@index([status])
+}
+
+enum ScanType {
+  CONTAINER
+  DEPENDENCIES
+  CONFIGURATION
+  FILES
+}
+
+enum ScanStatus {
+  PENDING
+  SCANNING
+  COMPLETED
+  FAILED
+}
+
+// ==================== Webhook System Models ====================
+model Webhook {
+  id              String              @id @default(uuid())
+  userId          String
+  name            String
+  url             String
+  secret          String?
+  events          WebhookEvent[]
+  enabled         Boolean             @default(true)
+  retryCount      Int                 @default(3)
+  timeout         Int                 @default(30000)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  deliveries      WebhookDelivery[]
+
+  @@index([userId])
+  @@index([enabled])
+}
+
+enum WebhookEvent {
+  SERVER_CREATED
+  SERVER_DELETED
+  SERVER_STARTED
+  SERVER_STOPPED
+  SERVER_CRASHED
+  BACKUP_COMPLETED
+  BACKUP_FAILED
+  PLAYER_JOINED
+  PLAYER_LEFT
+  ANOMALY_DETECTED
+  RESOURCE_OPTIMIZED
+  SECURITY_ALERT
+}
+
+model WebhookDelivery {
+  id              String          @id @default(uuid())
+  webhookId       String
+  event           WebhookEvent
+  payload         Json
+  status          DeliveryStatus  @default(PENDING)
+  responseCode    Int?
+  responseBody    String?
+  attempts        Int             @default(0)
+  lastAttempt     DateTime?
+  createdAt       DateTime        @default(now())
+
+  webhook         Webhook         @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, createdAt])
+  @@index([status])
+}
+
+enum DeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  RETRYING
+}
+
+// ==================== Disaster Recovery Models ====================
+model DisasterRecoveryPlan {
+  id                    String          @id @default(uuid())
+  serverId              String          @unique
+  enabled               Boolean         @default(false)
+  failoverHostId        String?
+  backupFrequency       Int             @default(60)    // minutes
+  geoReplication        Boolean         @default(false)
+  replicationRegions    String[]
+  autoFailover          Boolean         @default(false)
+  healthCheckInterval   Int             @default(5)     // minutes
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([enabled])
+}
+
+model FailoverEvent {
+  id                String          @id @default(uuid())
+  serverId          String
+  reason            String
+  sourceHostId      String
+  targetHostId      String
+  status            FailoverStatus  @default(INITIATED)
+  startedAt         DateTime        @default(now())
+  completedAt       DateTime?
+  downtime          Int?            // seconds
+  success           Boolean?
+  errorMessage      String?
+
+  @@index([serverId, startedAt])
+  @@index([status])
+}
+
+enum FailoverStatus {
+  INITIATED
+  BACKING_UP
+  TRANSFERRING
+  STARTING
+  COMPLETED
+  FAILED
+  ROLLED_BACK
+}
+
+// ==================== World Management Models ====================
+model WorldTemplate {
+  id                String          @id @default(uuid())
+  name              String
+  description       String
+  minecraftVersion  String
+  worldType         WorldType
+  seed              String?
+  size              Int             // in MB
+  previewImage      String?
+  downloadUrl       String
+  downloads         Int             @default(0)
+  rating            Float           @default(0)
+  featured          Boolean         @default(false)
+  tags              String[]
+  createdAt         DateTime        @default(now())
+
+  @@index([worldType])
+  @@index([featured])
+  @@index([downloads])
+}
+
+enum WorldType {
+  SURVIVAL
+  CREATIVE
+  ADVENTURE
+  SKYBLOCK
+  PRISON
+  MINIGAME
+  CUSTOM
+}
+
+model ChunkPregeneration {
+  id              String          @id @default(uuid())
+  serverId        String
+  status          PregenStatus    @default(PENDING)
+  radius          Int
+  centerX         Int
+  centerZ         Int
+  progress        Float           @default(0)
+  chunksTotal     Int?
+  chunksCompleted Int             @default(0)
+  startedAt       DateTime        @default(now())
+  completedAt     DateTime?
+  estimatedTime   Int?            // seconds
+
+  @@index([serverId, status])
+}
+
+enum PregenStatus {
+  PENDING
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ==================== Advanced Backup Models ====================
+model BackupSchedule {
+  id              String          @id @default(uuid())
+  serverId        String
+  enabled         Boolean         @default(true)
+  cronExpression  String
+  retentionDays   Int             @default(7)
+  incremental     Boolean         @default(false)
+  encrypted       Boolean         @default(false)
+  compression     CompressionType @default(GZIP)
+  geoReplicate    Boolean         @default(false)
+  replicationRegions String[]
+  lastRun         DateTime?
+  nextRun         DateTime?
+  createdAt       DateTime        @default(now())
+
+  @@index([serverId])
+  @@index([enabled])
+}
+
+enum CompressionType {
+  NONE
+  GZIP
+  ZSTD
+  LZ4
+}
+
+// ==================== Resource Pool Models ====================
+model ResourcePool {
+  id              String          @id @default(uuid())
+  name            String
+  description     String?
+  totalRam        Int
+  totalCpu        Float
+  allocatedRam    Int             @default(0)
+  allocatedCpu    Float           @default(0)
+  priority        Int             @default(0)
+  enabled         Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+
+  members         PoolMember[]
+
+  @@index([enabled])
+  @@index([priority])
+}
+
+model PoolMember {
+  id              String          @id @default(uuid())
+  poolId          String
+  serverId        String
+  priority        Int             @default(0)
+  maxRam          Int?
+  maxCpu          Float?
+  addedAt         DateTime        @default(now())
+
+  pool            ResourcePool    @relation(fields: [poolId], references: [id], onDelete: Cascade)
+
+  @@unique([poolId, serverId])
+  @@index([poolId])
+}
+
+// ==================== Serverless Functions Models ====================
+model ServerlessFunction {
+  id              String              @id @default(uuid())
+  userId          String
+  name            String
+  description     String?
+  trigger         FunctionTrigger
+  code            String
+  language        FunctionLanguage    @default(JAVASCRIPT)
+  enabled         Boolean             @default(true)
+  timeout         Int                 @default(30000)
+  environment     Json?
+  lastRun         DateTime?
+  executionCount  Int                 @default(0)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  executions      FunctionExecution[]
+
+  @@index([userId])
+  @@index([enabled])
+  @@index([trigger])
+}
+
+enum FunctionTrigger {
+  HTTP
+  SCHEDULE
+  SERVER_EVENT
+  WEBHOOK
+  MANUAL
+}
+
+enum FunctionLanguage {
+  JAVASCRIPT
+  PYTHON
+  LUA
+}
+
+model FunctionExecution {
+  id              String              @id @default(uuid())
+  functionId      String
+  status          ExecutionStatus     @default(RUNNING)
+  input           Json?
+  output          Json?
+  error           String?
+  duration        Int?                // milliseconds
+  startedAt       DateTime            @default(now())
+  completedAt     DateTime?
+
+  function        ServerlessFunction  @relation(fields: [functionId], references: [id], onDelete: Cascade)
+
+  @@index([functionId, startedAt])
+  @@index([status])
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  TIMEOUT
+}
+
+// ==================== Multi-Tenancy Models ====================
+model Organization {
+  id              String          @id @default(uuid())
+  name            String
+  slug            String          @unique
+  logoUrl         String?
+  customDomain    String?
+  theme           Json?
+  plan            PlanType        @default(FREE)
+  maxUsers        Int             @default(5)
+  maxServers      Int             @default(10)
+  features        String[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  members         OrganizationMember[]
+
+  @@index([slug])
+  @@index([plan])
+}
+
+enum PlanType {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+model OrganizationMember {
+  id              String          @id @default(uuid())
+  organizationId  String
+  userId          String
+  role            OrgRole         @default(MEMBER)
+  permissions     String[]
+  joinedAt        DateTime        @default(now())
+
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+// ==================== Advanced Networking Models ====================
+model LoadBalancer {
+  id              String          @id @default(uuid())
+  name            String
+  algorithm       LBAlgorithm     @default(ROUND_ROBIN)
+  enabled         Boolean         @default(true)
+  healthCheck     Boolean         @default(true)
+  stickySession   Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+
+  targets         LBTarget[]
+
+  @@index([enabled])
+}
+
+enum LBAlgorithm {
+  ROUND_ROBIN
+  LEAST_CONNECTIONS
+  IP_HASH
+  WEIGHTED
+}
+
+model LBTarget {
+  id              String          @id @default(uuid())
+  loadBalancerId  String
+  serverId        String
+  weight          Int             @default(1)
+  enabled         Boolean         @default(true)
+
+  loadBalancer    LoadBalancer    @relation(fields: [loadBalancerId], references: [id], onDelete: Cascade)
+
+  @@unique([loadBalancerId, serverId])
+  @@index([loadBalancerId])
+}
+
+model CustomDNS {
+  id              String          @id @default(uuid())
+  serverId        String
+  domain          String          @unique
+  recordType      DNSRecordType   @default(A)
+  value           String
+  ttl             Int             @default(300)
+  proxied         Boolean         @default(false)
+  verified        Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+
+  @@index([serverId])
+  @@index([verified])
+}
+
+enum DNSRecordType {
+  A
+  AAAA
+  CNAME
+  SRV
+  TXT
+}
