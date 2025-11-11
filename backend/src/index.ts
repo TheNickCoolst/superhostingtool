@@ -19,6 +19,10 @@ import notificationRoutes from './routes/notification.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import fileRoutes from './routes/file.routes';
 import serverAdvancedRoutes from './routes/server-advanced.routes';
+import aiRoutes from './routes/ai.routes';
+import achievementRoutes from './routes/achievement.routes';
+import socialRoutes from './routes/social.routes';
+import marketplaceRoutes from './routes/marketplace.routes';
 
 import { errorHandler, AppError } from './middleware/error.middleware';
 import { rateLimiter } from './middleware/rateLimit.middleware';
@@ -85,6 +89,12 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/servers/advanced', serverAdvancedRoutes);
+
+// New innovative features
+app.use('/api/ai', aiRoutes);
+app.use('/api/achievements', achievementRoutes);
+app.use('/api/social', socialRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
 
 // ==================== Error Handling ====================
 app.use(errorHandler);
