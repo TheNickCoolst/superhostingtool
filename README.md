@@ -177,7 +177,56 @@ docker-compose ps
 - **Nutzer-Pools**: Jeder Nutzer kann bis zu 9 Server verwalten (konfigurierbar)
 - **DDoS-Schutz**: Rate Limiting und Ingress-Level-Protection
 
-### 🎉 Neue Features
+### 🎉 Innovative Features (NEU!)
+
+#### 🤖 KI & Automatisierung
+- **AI-Powered Recommendations**: Intelligente Empfehlungen für Performance-Optimierung, Ressourcen-Anpassung und Kostenoptimierung
+- **Anomaly Detection**: Automatische Erkennung ungewöhnlicher Muster in Server-Metriken mit ML-Algorithmen
+- **Predictive Maintenance**: Vorhersage potenzieller Probleme bevor sie auftreten
+- **Auto-Scaling**: Automatische Ressourcen-Anpassung basierend auf Echtzeit-Nutzung und konfigurierbaren Policies
+- **Cost Tracking**: Detaillierte Kostenanalyse mit Optimierungsvorschlägen
+
+#### 🏆 Gaming & Community
+- **Achievement System**: 20+ Achievements für Server-Management, Performance, Community und mehr
+- **Leaderboards**: Rankings nach Uptime, Performance, Spieleranzahl und Achievement-Punkten
+- **Tournament System**: Organisiere und verwalte PvP/Building/Survival Turniere
+- **Player Statistics**: Umfassende Spieler-Tracking und Statistiken
+
+#### 👥 Social Features
+- **Friends System**: Freunde hinzufügen, Freundschaftsanfragen verwalten
+- **Guild/Clan System**: Erstelle oder trete Gilden bei, verwalte Mitglieder und Server
+- **Integrated Chat**: Direktnachrichten und Guild-Chat direkt in der Platform
+- **Activity Feed**: Öffentliche und private Aktivitäten-Timeline
+- **Social Profiles**: Detaillierte Benutzerprofile mit Statistiken und Achievements
+
+#### 🛒 Marketplace
+- **Plugin/Mod Marketplace**: Kaufe und verkaufe Mods, Plugins, Templates und Worlds
+- **Review System**: Bewertungen und Kommentare mit Verified Purchase Badge
+- **Credit System**: Integrierte Währung mit Transaktions-Historie
+- **Featured & Trending**: Kuratierte und beliebte Inhalte
+- **Seller Dashboard**: Detaillierte Verkäufer-Statistiken und Umsatz-Tracking
+
+#### 📊 Advanced Monitoring
+- **Health Checks**: Multi-Layer Gesundheitsprüfungen (Ping, Query, RCON, Custom)
+- **Performance Reports**: Automatische Reports (stündlich, täglich, wöchentlich, monatlich)
+- **Alert Rules**: Konfigurierbare Alerts mit Custom-Metriken und Schwellwerten
+- **Incident Management**: Incident-Tracking mit Status und Resolution-Workflow
+- **Real-time Anomaly Alerts**: Sofortige Benachrichtigungen bei kritischen Abweichungen
+
+#### 🔧 Advanced Server Features
+- **Server Clustering**: BungeeCord/Velocity/Waterfall Netzwerk-Management
+- **Server Snapshots**: Point-in-Time Snapshots mit Verschlüsselung
+- **Live Migration**: Migriere Server zwischen Hosts ohne Downtime
+- **A/B Testing**: Test verschiedene Konfigurationen parallel
+- **Blue-Green Deployments**: Zero-Downtime Updates
+
+#### 🔐 Integration & API
+- **API Keys**: Granulare API-Zugriffskontrolle mit Permissions und Rate Limits
+- **Webhooks**: Event-basierte Webhooks für externe Integrationen
+- **Audit Logging**: Vollständige Audit-Trails aller Aktionen
+- **OAuth Integration**: Unterstützung für externe OAuth-Provider (geplant)
+
+### 🎉 Bestehende Features
 
 - **Server-Templates**: Vorkonfigurierte Server-Setups für schnelle Bereitstellung
 - **File Manager**: Web-basierter Datei-Browser zum Bearbeiten, Hochladen und Verwalten von Server-Dateien
@@ -186,9 +235,9 @@ docker-compose ps
 - **Notification System**: E-Mail, Webhook und Discord-Benachrichtigungen für Server-Events
 - **Advanced Analytics**: Detaillierte Performance-Metriken mit historischen Trends und Grafiken
 - **Console Logs**: Durchsuchbare Server-Logs mit Filterung nach Level
-- **Live Console**: Echtzeit-Server-Konsole im Browser (geplant)
+- **Live Console**: Echtzeit-Server-Konsole im Browser
 - **World Import/Export**: Welten hoch- und herunterladen (über File Manager)
-- **Server Cloning**: Server duplizieren mit allen Einstellungen (geplant)
+- **Server Cloning**: Server duplizieren mit allen Einstellungen
 
 ### 🎯 Besondere Highlights
 
@@ -742,6 +791,99 @@ POST   /api/files/server/:serverId/directory  # Verzeichnis erstellen
 POST   /api/files/server/:serverId/upload     # Datei hochladen
 GET    /api/files/server/:serverId/download   # Datei herunterladen
 GET    /api/files/server/:serverId/info       # Datei-Informationen
+```
+
+#### **AI & Automation** (NEU!)
+
+```http
+# AI Recommendations
+GET    /api/ai/recommendations/:serverId           # Empfehlungen abrufen
+POST   /api/ai/recommendations/:serverId/analyze   # Analyse triggern
+POST   /api/ai/recommendations/:id/apply           # Empfehlung anwenden
+
+# Anomaly Detection
+GET    /api/ai/anomalies/:serverId                 # Aktive Anomalien
+GET    /api/ai/anomalies/:serverId/stats           # Anomalie-Statistiken
+POST   /api/ai/anomalies/:id/resolve               # Anomalie beheben
+
+# Auto-Scaling
+GET    /api/ai/autoscaling/:serverId               # Policy abrufen
+PUT    /api/ai/autoscaling/:serverId               # Policy aktualisieren
+POST   /api/ai/autoscaling/:serverId/start         # Auto-Scaling starten
+POST   /api/ai/autoscaling/:serverId/stop          # Auto-Scaling stoppen
+GET    /api/ai/autoscaling/:serverId/history       # Scaling-Historie
+```
+
+#### **Achievements** (NEU!)
+
+```http
+GET    /api/achievements                            # Alle Achievements mit Progress
+GET    /api/achievements/user                       # User Achievement Summary
+GET    /api/achievements/user/:userId               # Anderer User's Achievements
+POST   /api/achievements/check                      # Achievements prüfen
+GET    /api/achievements/leaderboard                # Achievement Leaderboard
+POST   /api/achievements/initialize                 # Initialize (Admin)
+```
+
+#### **Social Features** (NEU!)
+
+```http
+# Friends
+GET    /api/social/friends                          # Freundesliste
+GET    /api/social/friends/requests                 # Ausstehende Anfragen
+POST   /api/social/friends/request                  # Freundschaftsanfrage senden
+POST   /api/social/friends/:id/accept               # Anfrage akzeptieren
+DELETE /api/social/friends/:id                      # Freund entfernen
+
+# Guilds
+GET    /api/social/guilds/search                    # Gilden suchen
+GET    /api/social/guilds/my                        # Eigene Gilde
+GET    /api/social/guilds/:guildId                  # Gilde Details
+POST   /api/social/guilds                           # Gilde erstellen
+POST   /api/social/guilds/:guildId/join             # Gilde beitreten
+POST   /api/social/guilds/:guildId/leave            # Gilde verlassen
+PUT    /api/social/guilds/:guildId/members/:id/role # Rolle ändern
+DELETE /api/social/guilds/:guildId/members/:id      # Mitglied kicken
+POST   /api/social/guilds/:guildId/servers          # Server hinzufügen
+DELETE /api/social/guilds/:guildId/servers/:id      # Server entfernen
+
+# Chat
+GET    /api/social/chat/direct/:userId              # Direktnachrichten
+GET    /api/social/chat/guild/:guildId              # Guild Chat
+POST   /api/social/chat/send                        # Nachricht senden
+POST   /api/social/chat/mark-read/:senderId         # Als gelesen markieren
+GET    /api/social/chat/unread                      # Ungelesene Anzahl
+```
+
+#### **Marketplace** (NEU!)
+
+```http
+# Listings
+GET    /api/marketplace/search                      # Listings suchen
+GET    /api/marketplace/listings/:id                # Listing Details
+POST   /api/marketplace/listings                    # Listing erstellen
+PUT    /api/marketplace/listings/:id                # Listing aktualisieren
+DELETE /api/marketplace/listings/:id                # Listing löschen
+GET    /api/marketplace/featured                    # Featured Listings
+GET    /api/marketplace/trending                    # Trending Listings
+
+# Purchases
+POST   /api/marketplace/purchase/:listingId         # Item kaufen
+GET    /api/marketplace/purchases                   # Meine Käufe
+POST   /api/marketplace/purchases/:id/refund        # Rückerstattung
+
+# Reviews
+POST   /api/marketplace/listings/:id/reviews        # Review hinzufügen
+
+# Seller
+GET    /api/marketplace/seller/listings             # Meine Listings
+GET    /api/marketplace/seller/stats                # Verkäufer-Statistiken
+GET    /api/marketplace/seller/:sellerId/stats      # Andere Verkäufer Stats
+
+# Admin
+POST   /api/marketplace/admin/listings/:id/approve  # Genehmigen (Admin)
+POST   /api/marketplace/admin/listings/:id/reject   # Ablehnen (Admin)
+POST   /api/marketplace/admin/listings/:id/feature  # Featured (Admin)
 ```
 
 ### Beispiel: Server erstellen
