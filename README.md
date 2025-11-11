@@ -29,6 +29,18 @@ npm run dev         # Server starten
 - ✅ **Zero-Config** - Erste Registrierung wird automatisch Admin
 - ✅ **Enterprise-Features** - File Manager, Backups, Monitoring, Templates, Scheduled Tasks
 
+## 🚀 NEU: Innovative v2.0 Features
+
+- 🤖 **AI-Powered Performance Optimizer** - Automatische Lag-Erkennung & Auto-Fix
+- 📈 **Intelligent Auto-Scaling** - Ressourcen passen sich automatisch an
+- 💤 **Server Hibernation Mode** - Spare bis zu 70% Kosten
+- 🌍 **Multi-World Management** - Mehrere Welten pro Server + Snapshots
+- 🛒 **Server Marketplace** - Community-Templates mit Bewertungen
+- 🔗 **Webhook System** - Integration mit Discord, Slack & Custom Apps
+- 📊 **Advanced Analytics** - Predictive Metrics & Cost-Forecasting
+
+**[➡️ Alle neuen Features im Detail](./INNOVATIVE_FEATURES.md)**
+
 ---
 
 ## ⚡ SUPER EINFACHE INSTALLATION
