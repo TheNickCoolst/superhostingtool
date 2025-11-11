@@ -3,6 +3,9 @@ import { Host, MinecraftServer } from '@prisma/client';
 import { AgentCommandType, AgentResponse } from '@minecraft-hosting/shared';
 import { prisma } from '../lib/prisma';
 
+// Re-export types for other services
+export { AgentCommandType, AgentResponse };
+
 /**
  * Agent Service
  * Kommuniziert mit den Host-Agenten über REST API
@@ -238,6 +241,15 @@ export class AgentService {
     });
   }
 
+  async updateServerResources(hostId: string, containerName: string, allocatedRam: number, allocatedCpu: number): Promise<AgentResponse> {
+    const host = await this.getHost(hostId);
+    const server = await prisma.minecraftServer.findFirst({
+      where: { containerName }
+    });
+    if (!server) throw new Error(`Server with container ${containerName} not found`);
+    return this.updateResources(host, server, allocatedRam, allocatedCpu);
+  }
+
   /**
    * Helper method to get host by ID
    */
@@ -279,7 +291,7 @@ export class AgentService {
   /**
    * Sendet einen Befehl an den Host-Agent
    */
-  private async sendCommand(host: Host, type: AgentCommandType, payload: any): Promise<AgentResponse> {
+  public async sendCommand(host: Host, type: AgentCommandType, payload: any): Promise<AgentResponse> {
     try {
       const response = await axios.post(
         `http://${host.ipAddress}:4000/api/command`,
@@ -302,4 +314,38 @@ export class AgentService {
       throw new Error(`Failed to communicate with host agent: ${error.message}`);
     }
   }
+
+  // Static helper methods for backward compatibility
+  static async getServerStats(hostId: string, containerName: string) {
+    const instance = new AgentService();
+    const host = await instance['getHost'](hostId);
+    const server = await prisma.minecraftServer.findFirst({
+      where: { containerName }
+    });
+    if (!server) throw new Error(`Server with container ${containerName} not found`);
+    return await instance.getStats(host, server);
+  }
+
+  static async startServer(hostId: string, containerName: string) {
+    const instance = new AgentService();
+    const host = await instance['getHost'](hostId);
+    const server = await prisma.minecraftServer.findFirst({
+      where: { containerName }
+    });
+    if (!server) throw new Error(`Server with container ${containerName} not found`);
+    return await instance.startServer(host, server);
+  }
+
+  static async executeCommand(host: Host, server: MinecraftServer, command: string) {
+    const instance = new AgentService();
+    return await instance.executeCommand(host, server, command);
+  }
+
+  static async updateServerResources(host: Host, server: MinecraftServer, allocatedRam: number, allocatedCpu: number) {
+    const instance = new AgentService();
+    return await instance.updateResources(host, server, allocatedRam, allocatedCpu);
+  }
 }
+
+// Export singleton instance for backward compatibility
+export const agentService = new AgentService();

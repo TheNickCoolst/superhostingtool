@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma.singleton';
 import { AgentService } from './agent.service';
 import { logger } from '../lib/logger';
+import { ServerStatus } from '@prisma/client';
 
 /**
  * Health Check Service
@@ -65,7 +66,7 @@ export class HealthCheckService {
   private async performHealthChecks(): Promise<void> {
     const runningServers = await prisma.minecraftServer.findMany({
       where: {
-        status: MinecraftServerStatus.RUNNING,
+        status: ServerStatus.RUNNING,
       },
     });
 
@@ -111,7 +112,8 @@ export class HealthCheckService {
 
     try {
       // 1. Check if container is running
-      const stats = await AgentService.getServerStats(server.hostId, server.containerName);
+      const statsResponse = await AgentService.getServerStats(server.hostId, server.containerName);
+      const stats = statsResponse.data || {};
       checks.containerRunning = stats.status === 'running';
 
       if (!checks.containerRunning) {
@@ -119,18 +121,18 @@ export class HealthCheckService {
       }
 
       // 2. Check memory usage
-      checks.memoryUsage = stats.memoryUsage;
-      if (stats.memoryUsage > 95) {
+      checks.memoryUsage = stats.memoryUsage || 0;
+      if (stats.memoryUsage && stats.memoryUsage > 95) {
         issues.push(`Memory usage critical: ${stats.memoryUsage.toFixed(1)}%`);
-      } else if (stats.memoryUsage > 85) {
+      } else if (stats.memoryUsage && stats.memoryUsage > 85) {
         issues.push(`Memory usage high: ${stats.memoryUsage.toFixed(1)}%`);
       }
 
       // 3. Check CPU usage
-      checks.cpuUsage = stats.cpuUsage;
-      if (stats.cpuUsage > 95) {
+      checks.cpuUsage = stats.cpuUsage || 0;
+      if (stats.cpuUsage && stats.cpuUsage > 95) {
         issues.push(`CPU usage critical: ${stats.cpuUsage.toFixed(1)}%`);
-      } else if (stats.cpuUsage > 85) {
+      } else if (stats.cpuUsage && stats.cpuUsage > 85) {
         issues.push(`CPU usage high: ${stats.cpuUsage.toFixed(1)}%`);
       }
 

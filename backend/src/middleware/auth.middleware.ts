@@ -48,6 +48,9 @@ export const authenticate = (
   }
 };
 
+// Alias for backward compatibility
+export const authenticateToken = authenticate;
+
 export const authorize = (...roles: UserRole[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {

@@ -2,7 +2,7 @@ import { MinecraftServer, ServerStatus, MinecraftVersionType } from '@prisma/cli
 import { AppError } from '../middleware/error.middleware';
 import { prisma } from '../lib/prisma';
 import { HostService } from './host.service';
-import { AgentService } from './agent.service';
+import { AgentService, AgentResponse } from './agent.service';
 import { WebSocketService } from './websocket.service';
 import { WebSocketEvent } from '@minecraft-hosting/shared';
 
@@ -432,7 +432,7 @@ export class ServerService {
       }
 
       // Update host resource usage
-      await this.hostService.updateResourceUsage(host.id, originalServer.allocatedRam, originalServer.allocatedCpu);
+      await this.hostService.updateResourceUsage(host.id, originalServer.allocatedRam, originalServer.allocatedCpu, 1);
 
       // Update server status
       const updatedServer = await prisma.minecraftServer.update({

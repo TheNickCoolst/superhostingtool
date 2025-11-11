@@ -180,6 +180,7 @@ export interface MinecraftVersion {
 
 // ==================== WebSocket Events ====================
 export enum WebSocketEvent {
+  SERVER_CREATED = 'server:created',
   SERVER_STATUS_CHANGED = 'server:status:changed',
   SERVER_STATS_UPDATE = 'server:stats:update',
   SERVER_LOG = 'server:log',
